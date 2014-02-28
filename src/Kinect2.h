@@ -241,6 +241,12 @@ public:
 	public:
 		ExcDeviceOpenFailed() throw();
 	};
+
+	class ExcGetCoordinateMapperFailed : public Exception 
+	{
+	public:
+		ExcGetCoordinateMapperFailed( long hr ) throw();
+	};
 };
 
 }

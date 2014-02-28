@@ -555,6 +555,11 @@ void Device::start( const DeviceOptions& deviceOptions )
 	if ( mKinect == KCB_INVALID_HANDLE ) {
 		throw ExcDeviceOpenFailed();
 	}
+
+	hr = KCBGetCoordinateMapper( mKinect, mCoordinateMapper );
+	if ( FAILED( hr ) ) {
+		throw ExcGetCoordinateMapperFailed( hr );
+	}
 }
 
 void Device::stop()
@@ -918,6 +923,11 @@ Device::ExcDeviceNotAvailable::ExcDeviceNotAvailable( long hr ) throw()
 Device::ExcDeviceOpenFailed::ExcDeviceOpenFailed() throw()
 {
 	sprintf( mMessage, "Unable to open device." );
+}
+
+Device::ExcGetCoordinateMapperFailed::ExcGetCoordinateMapperFailed( long hr ) throw()
+{
+	sprintf( mMessage, "Unable to get device coordinate mapper. Error: %i", hr );
 }
 
 }
