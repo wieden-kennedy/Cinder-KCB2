@@ -246,7 +246,7 @@ Channel16u mapDepthFrameToColor( const Channel16u& depth, ICoordinateMapper* map
 	if ( mapper != 0 ) {
 		size_t numPoints = depth.getWidth() * depth.getHeight();
 		vector<ColorSpacePoint> colorSpacePoints( numPoints );
-		long hr = mapper->MapDepthFrameToColorSpace( (UINT)numPoints, depth.getData(), numPoints, &colorSpacePoints[ 0 ] );
+		long hr = mapper->MapDepthFrameToColorSpace( (UINT)numPoints, depth.getData(), (UINT)numPoints, &colorSpacePoints[ 0 ] );
 		if ( SUCCEEDED( hr ) ) {
 			Channel16u::Iter iter = channel.getIter();
 			size_t i = 0;
@@ -455,7 +455,8 @@ bool Body::isTracked() const
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 Frame::Frame()
-: mTimeStamp( 0L )
+: mDepthMaxReliableDistance( 0 ), mDepthMinReliableDistance( 0 ), mFovDiagonal( 0.0f ), 
+mFovHorizontal( 0.0f ), mFovVertical( 0.0f ), mTimeStamp( 0L )
 {
 }
 
@@ -487,6 +488,21 @@ const Channel16u& Frame::getDepth() const
 	return mChannelDepth;
 }
 
+float Frame::getFovDiagonal() const
+{
+	return mFovDiagonal;
+}
+
+float Frame::getFovHorizontal() const
+{
+	return mFovHorizontal;
+}
+
+float Frame::getFovVertical() const
+{
+	return mFovVertical;
+}
+
 const Channel16u& Frame::getInfrared() const
 {
 	return mChannelInfrared;
@@ -495,6 +511,16 @@ const Channel16u& Frame::getInfrared() const
 const Channel16u& Frame::getInfraredLongExposure() const
 {
 	return mChannelInfraredLongExposure;
+}
+
+uint16_t Frame::getMaxReliableDepthDistance() const
+{
+	return mDepthMinReliableDistance;
+}
+
+uint16_t Frame::getMinReliableDepthDistance() const
+{
+	return mDepthMinReliableDistance;
 }
 
 int64_t Frame::getTimeStamp() const
@@ -556,10 +582,10 @@ void Device::start( const DeviceOptions& deviceOptions )
 		throw ExcDeviceOpenFailed();
 	}
 
-	hr = KCBGetCoordinateMapper( mKinect, mCoordinateMapper );
+	/*hr = KCBGetCoordinateMapper( mKinect, mCoordinateMapper );
 	if ( FAILED( hr ) ) {
 		throw ExcGetCoordinateMapperFailed( hr );
-	}
+	}*/
 }
 
 void Device::stop()
@@ -580,106 +606,27 @@ void Device::update()
 		return;
 	}
 
-	IAudioBeamFrame* audioFrame								= 0;
-	IBodyFrame* bodyFrame									= 0;
-	IBodyIndexFrame* bodyIndexFrame							= 0;
-	IColorFrame* colorFrame									= 0;
-	IDepthFrame* depthFrame									= 0;
-	IMultiSourceFrame* frame								= 0;
-	IInfraredFrame* infraredFrame							= 0;
-	ILongExposureInfraredFrame* infraredLongExposureFrame	= 0;
-	
-	long hr = S_OK;
-	
-	if ( SUCCEEDED( hr ) && mDeviceOptions.isAudioEnabled() ) {
-		// TODO audio	
-	}
+	Frame frame;
 
-	if ( SUCCEEDED( hr ) && mDeviceOptions.isBodyEnabled() ) {
-		hr = KCBGetBodyFrame( mKinect, &bodyFrame );
-	}
-
-	if ( SUCCEEDED( hr ) && mDeviceOptions.isBodyIndexEnabled() ) {
-		hr = KCBGetBodyIndexFrame( mKinect, &bodyIndexFrame );
-	}
-
-	if ( SUCCEEDED( hr ) && mDeviceOptions.isColorEnabled() ) {
-		hr = KCBGetColorFrame( mKinect, &colorFrame );
-	}
-
-	if ( SUCCEEDED( hr ) && mDeviceOptions.isDepthEnabled() ) {
-		hr = KCBGetDepthFrame( mKinect, &depthFrame );
-	}
-
-	if ( SUCCEEDED( hr ) && mDeviceOptions.isInfraredEnabled() ) {
-		hr = KCBGetInfraredFrame( mKinect, &infraredFrame );
-	}
-
-	if ( SUCCEEDED( hr ) && mDeviceOptions.isInfraredLongExposureEnabled() ) {
-		hr = KCBGetLongExposureInfraredFrame( mKinect, &infraredLongExposureFrame );
-	}
-
-	if ( SUCCEEDED( hr ) ) {
-		long long timeStamp										= 0L;
-
-		// TODO audio
-
-		std::vector<Body> bodies;
-		int64_t bodyTime										= 0L;
-		IBody* kinectBodies[ BODY_COUNT ]						= { 0 };
-		
-		Channel8u bodyIndexChannel;
-		IFrameDescription* bodyIndexFrameDescription			= 0;
-		int32_t bodyIndexWidth									= 0;
-		int32_t bodyIndexHeight									= 0;
-		uint32_t bodyIndexBufferSize							= 0;
-		uint8_t* bodyIndexBuffer								= 0;
-		int64_t bodyIndexTime									= 0L;
-		
-		Surface8u colorSurface;
-		IFrameDescription* colorFrameDescription				= 0;
-		int32_t colorWidth										= 0;
-		int32_t colorHeight										= 0;
-		ColorImageFormat colorImageFormat						= ColorImageFormat_None;
-		uint32_t colorBufferSize								= 0;
-		uint8_t* colorBuffer									= 0;
-
-		Channel16u depthChannel;
-		IFrameDescription* depthFrameDescription				= 0;
-		int32_t depthWidth										= 0;
-		int32_t depthHeight										= 0;
-		uint16_t depthMinReliableDistance						= 0;
-		uint16_t depthMaxReliableDistance						= 0;
-		uint32_t depthBufferSize								= 0;
-		uint16_t* depthBuffer									= 0;
-
-		Channel16u infraredChannel;
-		IFrameDescription* infraredFrameDescription				= 0;
-		int32_t infraredWidth									= 0;
-		int32_t infraredHeight									= 0;
-		uint32_t infraredBufferSize								= 0;
-		uint16_t* infraredBuffer								= 0;
-
-		Channel16u infraredLongExposureChannel;
-		IFrameDescription* infraredLongExposureFrameDescription	= 0;
-		int32_t infraredLongExposureWidth						= 0;
-		int32_t infraredLongExposureHeight						= 0;
-		uint32_t infraredLongExposureBufferSize					= 0;
-		uint16_t* infraredLongExposureBuffer					= 0;
-
-		hr = depthFrame->get_RelativeTime( &timeStamp );
-
-		// TODO audio
-		if ( mDeviceOptions.isAudioEnabled() ) {
-
+	if ( mDeviceOptions.isAudioEnabled() ) {
+		IAudioBeamFrame* audioFrame = nullptr;
+		if ( audioFrame != nullptr ) {
+			// TODO audio
+			audioFrame->Release();
+			audioFrame = nullptr;
 		}
+	}
 
-		if ( mDeviceOptions.isBodyEnabled() ) {
+	if ( mDeviceOptions.isBodyEnabled() ) {
+		IBodyFrame* bodyFrame = nullptr;
+		long hr = KCBGetBodyFrame( mKinect, &bodyFrame );
+		if ( SUCCEEDED( hr ) && bodyFrame != nullptr ) {
+			int64_t timeStamp					= 0L;
+			IBody* kinectBodies[ BODY_COUNT ]	= { 0 };
+		
+			hr = bodyFrame->GetAndRefreshBodyData( BODY_COUNT, kinectBodies );
 			if ( SUCCEEDED( hr ) ) {
-				hr = bodyFrame->get_RelativeTime( &bodyTime );
-			}
-			if ( SUCCEEDED( hr ) ) {
-				hr = bodyFrame->GetAndRefreshBodyData( BODY_COUNT, kinectBodies );
+				hr = bodyFrame->get_RelativeTime( &timeStamp );
 			}
 			if ( SUCCEEDED( hr ) ) {
 				for ( uint8_t i = 0; i < 6; ++i ) {
@@ -707,197 +654,224 @@ void Device::update()
 								jointMap.insert( pair<JointType, Body::Joint>( static_cast<JointType>( j ), joint ) );
 							}
 							Body body( id, i, jointMap );
-							bodies.push_back( body );
+							frame.mBodies.push_back( body );
 						}
 					}
 				}
 			}
-		}
-
-		if ( mDeviceOptions.isBodyIndexEnabled() ) {
-			if ( SUCCEEDED( hr ) ) {
-				hr = bodyIndexFrame->get_RelativeTime( &bodyIndexTime );
-			}
-			if ( SUCCEEDED( hr ) ) {
-				hr = bodyIndexFrame->get_FrameDescription( &bodyIndexFrameDescription );
-			}
-			if ( SUCCEEDED( hr ) ) {
-				hr = bodyIndexFrameDescription->get_Width( &bodyIndexWidth );
-			}
-			if ( SUCCEEDED( hr ) ) {
-				hr = bodyIndexFrameDescription->get_Height( &bodyIndexHeight );
-			}
-			if ( SUCCEEDED( hr ) ) {
- 				hr = bodyIndexFrame->AccessUnderlyingBuffer( &bodyIndexBufferSize, &bodyIndexBuffer );
-			}
-			if ( SUCCEEDED( hr ) ) {
-				bodyIndexChannel = Channel8u( bodyIndexWidth, bodyIndexHeight );
-				memcpy( bodyIndexChannel.getData(), bodyIndexBuffer, bodyIndexWidth * bodyIndexHeight * sizeof( uint8_t ) );
-			}
-		}
-
-		if ( mDeviceOptions.isColorEnabled() ) {
-			if ( SUCCEEDED( hr ) ) {
-				hr = colorFrame->get_FrameDescription( &colorFrameDescription );
-				if ( SUCCEEDED( hr ) ) {
-					float vFov = 0.0f;
-					float hFov = 0.0f;
-					float dFov = 0.0f;
-					colorFrameDescription->get_VerticalFieldOfView( &vFov );
-					colorFrameDescription->get_HorizontalFieldOfView( &hFov );
-					colorFrameDescription->get_DiagonalFieldOfView( &dFov );
-				}
-			}
-			if ( SUCCEEDED( hr ) ) {
-				hr = colorFrameDescription->get_Width( &colorWidth );
-			}
-			if ( SUCCEEDED( hr ) ) {
-				hr = colorFrameDescription->get_Height( &colorHeight );
-			}
-			if ( SUCCEEDED( hr ) ) {
-				hr = colorFrame->get_RawColorImageFormat( &colorImageFormat );
-			}
-			if ( SUCCEEDED( hr ) ) {
-				colorBufferSize = colorWidth * colorHeight * sizeof( uint8_t ) * 4;
-				colorBuffer		= new uint8_t[ colorBufferSize ];
-				hr = colorFrame->CopyConvertedFrameDataToArray( colorBufferSize, reinterpret_cast<uint8_t*>( colorBuffer ), ColorImageFormat_Rgba );
-			
-				if ( SUCCEEDED( hr ) ) {
-					colorSurface = Surface8u( colorWidth, colorHeight, false, SurfaceChannelOrder::RGBA );
-					memcpy( colorSurface.getData(), colorBuffer, colorWidth * colorHeight * sizeof( uint8_t ) * 4 );
-				}
-
-				delete [] colorBuffer;
-				colorBuffer = 0;
-			}
-		}
-
-		if ( mDeviceOptions.isDepthEnabled() ) {
-			if ( SUCCEEDED( hr ) ) {
-				hr = depthFrame->get_FrameDescription( &depthFrameDescription );
-			}
-			if ( SUCCEEDED( hr ) ) {
-				hr = depthFrameDescription->get_Width( &depthWidth );
-			}
-			if ( SUCCEEDED( hr ) ) {
-				hr = depthFrameDescription->get_Height( &depthHeight );
-			}
-			if ( SUCCEEDED( hr ) ) {
-				hr = depthFrame->get_DepthMinReliableDistance( &depthMinReliableDistance );
-			}
-			if ( SUCCEEDED( hr ) ) {
-				hr = depthFrame->get_DepthMaxReliableDistance( &depthMaxReliableDistance );
-			}
-			if ( SUCCEEDED( hr ) ) {
-				hr = depthFrame->AccessUnderlyingBuffer( &depthBufferSize, &depthBuffer );
-			}
-			if ( SUCCEEDED( hr ) ) {
-				depthChannel = Channel16u( depthWidth, depthHeight );
-				memcpy( depthChannel.getData(), depthBuffer, depthWidth * depthHeight * sizeof( uint16_t ) );
-			}
-		}
-
-		if ( mDeviceOptions.isInfraredEnabled() ) {
-			if ( SUCCEEDED( hr ) ) {
-				hr = infraredFrame->get_FrameDescription( &infraredFrameDescription );
-			}
-			if ( SUCCEEDED( hr ) ) {
-				hr = infraredFrameDescription->get_Width( &infraredWidth );
-			}
-			if ( SUCCEEDED( hr ) ) {
-				hr = infraredFrameDescription->get_Height( &infraredHeight );
-			}
-			if ( SUCCEEDED( hr ) ) {
-				hr = infraredFrame->AccessUnderlyingBuffer( &infraredBufferSize, &infraredBuffer );
-			}
-			if ( SUCCEEDED( hr ) ) {
-				infraredChannel = Channel16u( infraredWidth, infraredHeight );
-				memcpy( infraredChannel.getData(), infraredBuffer,  infraredWidth * infraredHeight * sizeof( uint16_t ) );
-			}
-		}
-
-		if ( mDeviceOptions.isInfraredLongExposureEnabled() ) {
-			if ( SUCCEEDED( hr ) ) {
-				hr = infraredLongExposureFrame->get_FrameDescription( &infraredLongExposureFrameDescription );
-			}
-			if ( SUCCEEDED( hr ) ) {
-				hr = infraredLongExposureFrameDescription->get_Width( &infraredLongExposureWidth );
-			}
-			if ( SUCCEEDED( hr ) ) {
-				hr = infraredLongExposureFrameDescription->get_Height( &infraredLongExposureHeight );
-			}
-			if ( SUCCEEDED( hr ) ) {
-				hr = infraredLongExposureFrame->AccessUnderlyingBuffer( &infraredLongExposureBufferSize, &infraredLongExposureBuffer );
-			}
-			if ( SUCCEEDED( hr ) ) {
-				infraredLongExposureChannel = Channel16u( infraredLongExposureWidth, infraredLongExposureHeight );
-				memcpy( infraredLongExposureChannel.getData(), infraredLongExposureBuffer, infraredLongExposureWidth * infraredLongExposureHeight * sizeof( uint16_t ) );
-			}
-		}
-
-		if ( SUCCEEDED( hr ) ) {
-			mFrame.mBodies						= bodies;
-			mFrame.mChannelBodyIndex			= bodyIndexChannel;
-			mFrame.mChannelDepth				= depthChannel;
-			mFrame.mChannelInfrared				= infraredChannel;
-			mFrame.mChannelInfraredLongExposure	= infraredLongExposureChannel;
-			mFrame.mSurfaceColor				= colorSurface;
-			mFrame.mTimeStamp					= timeStamp;
-		}
-
-		if ( bodyIndexFrameDescription != 0 ) {
-			bodyIndexFrameDescription->Release();
-			bodyIndexFrameDescription = 0;
-		}
-		if ( colorFrameDescription != 0 ) {
-			colorFrameDescription->Release();
-			colorFrameDescription = 0;
-		}
-		if ( depthFrameDescription != 0 ) {
-			depthFrameDescription->Release();
-			depthFrameDescription = 0;
-		}
-		if ( infraredFrameDescription != 0 ) {
-			infraredFrameDescription->Release();
-			infraredFrameDescription = 0;
-		}
-		if ( infraredLongExposureFrameDescription != 0 ) {
-			infraredLongExposureFrameDescription->Release();
-			infraredLongExposureFrameDescription = 0;
+			bodyFrame->Release();
+			bodyFrame = nullptr;
 		}
 	}
 
-	if ( audioFrame != 0 ) {
-		audioFrame->Release();
-		audioFrame = 0;
+	if ( mDeviceOptions.isBodyIndexEnabled() ) {
+		IBodyIndexFrame* bodyIndexFrame = nullptr;
+		long hr = KCBGetBodyIndexFrame( mKinect, &bodyIndexFrame );
+		if ( SUCCEEDED( hr ) && bodyIndexFrame != nullptr ) {
+			IFrameDescription* frameDescription	= 0;
+			int32_t width						= 0;
+			int32_t height						= 0;
+			int64_t timeStamp					= 0L;
+		
+			hr	= bodyIndexFrame->get_FrameDescription( &frameDescription );
+			if ( SUCCEEDED( hr ) ) {
+				hr = frameDescription->get_Width( &width );
+			}
+			if ( SUCCEEDED( hr ) ) {
+				hr = frameDescription->get_Height( &height );
+			}
+			if ( SUCCEEDED( hr ) ) {
+				frame.mChannelBodyIndex = Channel8u( width, height );
+				KCBGetBodyIndexFrameBuffer( mKinect, width * height * sizeof( uint8_t ), frame.mChannelBodyIndex.getData(), &timeStamp );
+			}
+			if ( frameDescription != 0 ) {
+				frameDescription->Release();
+				frameDescription = 0;
+			}
+			if ( timeStamp > frame.mTimeStamp ) {
+				frame.mTimeStamp = timeStamp;
+			}
+			bodyIndexFrame->Release();
+			bodyIndexFrame = nullptr;
+		}
 	}
-	if ( bodyFrame != 0 ) {
-		bodyFrame->Release();
-		bodyFrame = 0;
+
+	if ( mDeviceOptions.isColorEnabled() ) {
+		IColorFrame* colorFrame	= nullptr;
+		long hr = KCBGetColorFrame( mKinect, &colorFrame );
+		if ( SUCCEEDED( hr ) && colorFrame != nullptr ) {
+			IFrameDescription* frameDescription	= 0;
+			int32_t width						= 0;
+			int32_t height						= 0;
+			ColorImageFormat imageFormat		= ColorImageFormat_None;
+			int64_t timeStamp					= 0L;
+		
+			hr = colorFrame->get_FrameDescription( &frameDescription );
+			if ( SUCCEEDED( hr ) ) {
+				hr = colorFrame->get_RawColorImageFormat( &imageFormat );
+			}
+			if ( SUCCEEDED( hr ) && frame.mFovDiagonal <= 0.0f ) {
+				hr = frameDescription->get_DiagonalFieldOfView( &frame.mFovDiagonal );
+			}
+			if ( SUCCEEDED( hr ) && frame.mFovHorizontal <= 0.0f ) {
+				hr = frameDescription->get_HorizontalFieldOfView( &frame.mFovHorizontal );
+			}
+			if ( SUCCEEDED( hr ) && frame.mFovVertical ) {
+				hr = frameDescription->get_VerticalFieldOfView( &frame.mFovVertical );
+			}
+			if ( SUCCEEDED( hr ) ) {
+				hr = frameDescription->get_Width( &width );
+			}
+			if ( SUCCEEDED( hr ) ) {
+				hr = frameDescription->get_Height( &height );
+			}
+			if ( SUCCEEDED( hr ) ) {
+				frame.mSurfaceColor = Surface8u( width, height, false, SurfaceChannelOrder::BGRA );
+				KCBGetColorFrameAsBGRA( mKinect, width * height * sizeof( uint8_t ) * 4, frame.mSurfaceColor.getData(), &timeStamp );
+			}
+			if ( frameDescription != 0 ) {
+				frameDescription->Release();
+				frameDescription = 0;
+			}
+			if ( timeStamp > frame.mTimeStamp ) {
+				frame.mTimeStamp = timeStamp;
+			}
+			colorFrame->Release();
+			colorFrame = nullptr;
+		}
 	}
-	if ( bodyIndexFrame != 0 ) {
-		bodyIndexFrame->Release();
-		bodyIndexFrame = 0;
+
+	if ( mDeviceOptions.isDepthEnabled() ) {
+		IDepthFrame* depthFrame = nullptr;
+		long hr = KCBGetDepthFrame( mKinect, &depthFrame );
+		if ( SUCCEEDED( hr ) && depthFrame != nullptr ) {
+			IFrameDescription* frameDescription	= 0;
+			int32_t width						= 0;
+			int32_t height						= 0;
+			int64_t timeStamp					= 0L;
+
+			hr = depthFrame->get_FrameDescription( &frameDescription );
+			if ( SUCCEEDED( hr ) ) {
+				hr = depthFrame->get_DepthMaxReliableDistance( &frame.mDepthMaxReliableDistance );
+			}
+			if ( SUCCEEDED( hr ) ) {
+				hr = depthFrame->get_DepthMinReliableDistance( &frame.mDepthMinReliableDistance );
+			}
+			if ( SUCCEEDED( hr ) && frame.mFovDiagonal <= 0.0f ) {
+				hr = frameDescription->get_DiagonalFieldOfView( &frame.mFovDiagonal );
+			}
+			if ( SUCCEEDED( hr ) && frame.mFovHorizontal <= 0.0f ) {
+				hr = frameDescription->get_HorizontalFieldOfView( &frame.mFovHorizontal );
+			}
+			if ( SUCCEEDED( hr ) && frame.mFovVertical ) {
+				hr = frameDescription->get_VerticalFieldOfView( &frame.mFovVertical );
+			}
+			if ( SUCCEEDED( hr ) ) {
+				hr = frameDescription->get_Width( &width );
+			}
+			if ( SUCCEEDED( hr ) ) {
+				hr = frameDescription->get_Height( &height );
+			}
+			if ( SUCCEEDED( hr ) ) {
+				frame.mChannelDepth = Channel16u( width, height );
+				hr = KCBGetDepthFrameBuffer( mKinect, width * height, frame.mChannelDepth.getData(), &timeStamp );
+			}
+			if ( frameDescription != 0 ) {
+				frameDescription->Release();
+				frameDescription = 0;
+			}
+			if ( timeStamp > frame.mTimeStamp ) {
+				frame.mTimeStamp = timeStamp;
+			}
+			depthFrame->Release();
+			depthFrame = nullptr;
+		}
 	}
-	if ( colorFrame != 0 ) {
-		colorFrame->Release();
-		colorFrame = 0;
+
+	if ( mDeviceOptions.isInfraredEnabled() ) {
+		IInfraredFrame* infraredFrame = nullptr;
+		long hr = KCBGetInfraredFrame( mKinect, &infraredFrame );
+		if ( SUCCEEDED( hr ) && infraredFrame != nullptr ) {
+			IFrameDescription* frameDescription	= 0;
+			int32_t width						= 0;
+			int32_t height						= 0;
+			int64_t timeStamp					= 0L;
+		
+			hr = infraredFrame->get_FrameDescription( &frameDescription );
+			if ( SUCCEEDED( hr ) && frame.mFovDiagonal <= 0.0f ) {
+				hr = frameDescription->get_DiagonalFieldOfView( &frame.mFovDiagonal );
+			}
+			if ( SUCCEEDED( hr ) && frame.mFovHorizontal <= 0.0f ) {
+				hr = frameDescription->get_HorizontalFieldOfView( &frame.mFovHorizontal );
+			}
+			if ( SUCCEEDED( hr ) && frame.mFovVertical ) {
+				hr = frameDescription->get_VerticalFieldOfView( &frame.mFovVertical );
+			}
+			if ( SUCCEEDED( hr ) ) {
+				hr = frameDescription->get_Width( &width );
+			}
+			if ( SUCCEEDED( hr ) ) {
+				hr = frameDescription->get_Height( &height );
+			}
+			if ( SUCCEEDED( hr ) ) {
+				frame.mChannelInfrared = Channel16u( width, height );
+				KCBGetInfraredFrameBuffer( mKinect, width * height, frame.mChannelInfrared.getData(), &timeStamp );
+			}
+			if ( frameDescription != 0 ) {
+				frameDescription->Release();
+				frameDescription = 0;
+			}
+			if ( timeStamp > frame.mTimeStamp ) {
+				frame.mTimeStamp = timeStamp;
+			}
+			infraredFrame->Release();
+			infraredFrame = nullptr;
+		}
 	}
-	if ( depthFrame != 0 ) {
-		depthFrame->Release();
-		depthFrame = 0;
+
+	if ( mDeviceOptions.isInfraredLongExposureEnabled() ) {
+		ILongExposureInfraredFrame* infraredLongExposureFrame = nullptr;
+		long hr = KCBGetLongExposureInfraredFrame( mKinect, &infraredLongExposureFrame );
+		if ( SUCCEEDED( hr ) && infraredLongExposureFrame != nullptr ) {
+			IFrameDescription* frameDescription	= 0;
+			int32_t width						= 0;
+			int32_t height						= 0;
+			int64_t timeStamp					= 0L;
+
+			hr = infraredLongExposureFrame->get_FrameDescription( &frameDescription );
+			if ( SUCCEEDED( hr ) && frame.mFovDiagonal <= 0.0f ) {
+				hr = frameDescription->get_DiagonalFieldOfView( &frame.mFovDiagonal );
+			}
+			if ( SUCCEEDED( hr ) && frame.mFovHorizontal <= 0.0f ) {
+				hr = frameDescription->get_HorizontalFieldOfView( &frame.mFovHorizontal );
+			}
+			if ( SUCCEEDED( hr ) && frame.mFovVertical ) {
+				hr = frameDescription->get_VerticalFieldOfView( &frame.mFovVertical );
+			}
+			if ( SUCCEEDED( hr ) ) {
+				hr = frameDescription->get_Width( &width );
+			}
+			if ( SUCCEEDED( hr ) ) {
+				hr = frameDescription->get_Height( &height );
+			}
+			if ( SUCCEEDED( hr ) ) {
+				frame.mChannelInfraredLongExposure = Channel16u( width, height );
+				KCBGetLongExposureInfraredFrameBuffer( mKinect, width * height, frame.mChannelInfraredLongExposure.getData(), &timeStamp );
+			}
+			if ( frameDescription != 0 ) {
+				frameDescription->Release();
+				frameDescription = 0;
+			}
+			if ( timeStamp > frame.mTimeStamp ) {
+				frame.mTimeStamp = timeStamp;
+			}
+			infraredLongExposureFrame->Release();
+			infraredLongExposureFrame = nullptr;
+		}
 	}
-	if ( frame != 0 ) {
-		frame->Release();
-		frame = 0;
-	}
-	if ( infraredFrame != 0 ) {
-		infraredFrame->Release();
-		infraredFrame = 0;
-	}
-	if ( infraredLongExposureFrame != 0 ) {
-		infraredLongExposureFrame->Release();
-		infraredLongExposureFrame = 0;
+
+	if ( frame.mTimeStamp > 0L ) {
+		mFrame = frame;
 	}
 
 	KCBSensorStatus( mKinect, &mStatus );

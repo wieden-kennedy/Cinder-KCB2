@@ -163,8 +163,13 @@ public:
 	const ci::Channel8u&						getBodyIndex() const;
 	const ci::Surface8u&						getColor() const;
 	const ci::Channel16u&						getDepth() const;
+	float										getFovDiagonal() const;
+	float										getFovHorizontal() const;
+	float										getFovVertical() const;
 	const ci::Channel16u&						getInfrared() const;
 	const ci::Channel16u&						getInfraredLongExposure() const;
+	uint16_t									getMaxReliableDepthDistance() const;
+	uint16_t									getMinReliableDepthDistance() const;
 	long long									getTimeStamp() const;
 protected:
 	Frame( long long frameId, const std::string& deviceId, const ci::Surface8u& color, 
@@ -176,6 +181,11 @@ protected:
 	ci::Channel16u								mChannelDepth;
 	ci::Channel16u								mChannelInfrared;
 	ci::Channel16u								mChannelInfraredLongExposure;
+	uint16_t									mDepthMaxReliableDistance;
+	uint16_t									mDepthMinReliableDistance;
+	float										mFovDiagonal;
+	float										mFovHorizontal;
+	float										mFovVertical;
 	ci::Surface8u								mSurfaceColor;
 	long long									mTimeStamp;
 

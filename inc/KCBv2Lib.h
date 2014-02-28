@@ -46,8 +46,8 @@ extern "C"
     KINECT_CB HRESULT APIENTRY KCBGetBodyIndexFrame(_In_ KCBHANDLE kcbHandle, _COM_Outptr_ IBodyIndexFrame **ppBodyIndexFrame);
     KINECT_CB HRESULT APIENTRY KCBGetColorFrame(_In_ KCBHANDLE kcbHandle, _COM_Outptr_ IColorFrame **ppColorFrame);
     KINECT_CB HRESULT APIENTRY KCBGetDepthFrame(_In_ KCBHANDLE kcbHandle, _COM_Outptr_ IDepthFrame **ppDepthFrame);
-    KINECT_CB HRESULT APIENTRY KCBGetInfraredFrame(_In_ KCBHANDLE kcbHandle, _COM_Outptr_ IInfraredFrame **ppColorFrame);
-    KINECT_CB HRESULT APIENTRY KCBGetLongExposureInfraredFrame(_In_ KCBHANDLE kcbHandle, _COM_Outptr_ ILongExposureInfraredFrame **ppColorFrame);
+    KINECT_CB HRESULT APIENTRY KCBGetInfraredFrame(_In_ KCBHANDLE kcbHandle, _COM_Outptr_ IInfraredFrame **ppInfraredFrame);
+    KINECT_CB HRESULT APIENTRY KCBGetLongExposureInfraredFrame(_In_ KCBHANDLE kcbHandle, _COM_Outptr_ ILongExposureInfraredFrame **ppLongExposureInfraredFrame);
 
     // copy methods just to get the buffer data
     KINECT_CB HRESULT APIENTRY KCBGetBodies(_In_ KCBHANDLE kcbHandle, UINT capacity, _Inout_updates_all_(capacity) IBody **bodies, _Out_opt_ LONGLONG* liTimeStamp);
