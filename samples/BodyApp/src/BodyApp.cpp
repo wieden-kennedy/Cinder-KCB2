@@ -86,7 +86,7 @@ void BodyApp::draw()
 		gl::scale( Vec2f( getWindowSize() ) / Vec2f( mFrame.getDepth().getSize() ) );
 		for ( const Kinect2::Body& body : mDevice->getFrame().getBodies() ) {
 			for ( const auto& joint : body.getJointMap() ) {
-				Vec2f pos = Kinect2::mapBodyCoordToDepth( joint.second.getPosition( ), mDevice->getCoordinateMapper() );
+				Vec2i pos = mDevice->mapCameraToDepth( joint.second.getPosition() );
 				gl::color( ColorAf::white() );
 				gl::drawSolidCircle( pos, 7.0f, 32 );
 				gl::color( Kinect2::getBodyColor( body.getIndex() ) );
@@ -114,10 +114,10 @@ void BodyApp::setup()
 	mDevice = Kinect2::Device::create();
 	mDevice->start( Kinect2::DeviceOptions().enableColor( false ).enableBody().enableBodyIndex() );
 	
-	console( ) << Kinect2::getDeviceCount() << " device(s) connected." << endl;
+	console() << Kinect2::getDeviceCount() << " device(s) connected." << endl;
 	map<size_t, string> deviceMap = Kinect2::getDeviceMap();
 	for ( const auto& device : deviceMap ) {
-		console( ) << "Index: " << device.first << ", ID: " << device.second << endl;
+		console() << "Index: " << device.first << ", ID: " << device.second << endl;
 	}
 
 	mParams = params::InterfaceGl::create( "Params", Vec2i( 200, 100 ) );

@@ -62,10 +62,12 @@ size_t											getDeviceCount();
 std::map<size_t, std::string>					getDeviceMap();
 std::string										getStatusMessage( KinectStatus status );
 
-ci::Vec2i										mapBodyCoordToColor( const ci::Vec3f& v, ICoordinateMapper* mapper );
-ci::Vec2i										mapBodyCoordToDepth( const ci::Vec3f& v, ICoordinateMapper* mapper );
-ci::Vec2i										mapDepthCoordToColor( const ci::Vec2i& v, uint16_t depth, ICoordinateMapper* mapper );
-ci::Channel16u									mapDepthFrameToColor( const ci::Channel16u& depth, ICoordinateMapper* mapper );
+CameraSpacePoint								toCameraSpacePoint( const ci::Vec3f& v );
+ColorSpacePoint									toColorSpacePoint( const ci::Vec2f& v );
+DepthSpacePoint									toDepthSpacePoint( const ci::Vec2f& v );
+PointF											toPointF( const ci::Vec2f& v );
+Vector4											toVector4( const ci::Quatf& q );
+Vector4											toVector4( const ci::Vec4f& v );
 
 ci::Quatf										toQuatf( const Vector4& v );
 ci::Vec2f										toVec2f( const PointF& v );
@@ -157,6 +159,17 @@ private:
 class Frame
 {
 public:
+	enum : size_t
+	{
+		TIMESTAMP_DEFAULT, 
+		TIMESTAMP_BODY, 
+		TIMESTAMP_BODY_INDEX, 
+		TIMESTAMP_COLOR, 
+		TIMESTAMP_DEPTH, 
+		TIMESTAMP_INFRARED, 
+		TIMESTAMP_INFRARED_LONG_EXPOSURE
+	} typedef TimeStamp;
+
 	Frame();
 
 	const std::vector<Body>&					getBodies() const;
@@ -170,12 +183,8 @@ public:
 	const ci::Channel16u&						getInfraredLongExposure() const;
 	uint16_t									getMaxReliableDepthDistance() const;
 	uint16_t									getMinReliableDepthDistance() const;
-	long long									getTimeStamp() const;
+	long long									getTimeStamp( TimeStamp timeStamp = TimeStamp::TIMESTAMP_DEFAULT ) const;
 protected:
-	Frame( long long frameId, const std::string& deviceId, const ci::Surface8u& color, 
-		const ci::Channel16u& depth, const ci::Channel16u& infrared, 
-		const ci::Channel16u& infraredLongExposure );
-
 	std::vector<Body>							mBodies;
 	ci::Channel8u								mChannelBodyIndex;
 	ci::Channel16u								mChannelDepth;
@@ -187,7 +196,7 @@ protected:
 	float										mFovHorizontal;
 	float										mFovVertical;
 	ci::Surface8u								mSurfaceColor;
-	long long									mTimeStamp;
+	std::map<TimeStamp, long long>				mTimeStamp;
 
 	friend class								Device;
 };
@@ -205,10 +214,22 @@ public:
 	void										start( const DeviceOptions& deviceOptions = DeviceOptions() );
 	void										stop();
 
-	ICoordinateMapper*							getCoordinateMapper() const;
 	const DeviceOptions&						getDeviceOptions() const;
 	const Frame&								getFrame() const;
 	KinectStatus								getStatus() const;
+
+	ci::Vec2i									mapCameraToColor( const ci::Vec3f& v ) const;
+	std::vector<ci::Vec2i>						mapCameraToColor( const std::vector<ci::Vec3f>& v ) const;
+	ci::Vec2i									mapCameraToDepth( const ci::Vec3f& v ) const;
+	std::vector<ci::Vec2i>						mapCameraToDepth( const std::vector<ci::Vec3f>& v ) const;
+	std::vector<ci::Vec3f>						mapColorToCamera( const ci::Surface8u& color ) const;
+	std::vector<ci::Vec2i>						mapColorToDepth( const ci::Surface8u& color ) const;
+	ci::Vec3f									mapDepthToCamera( const ci::Vec2i& v, const ci::Channel16u& depth ) const;
+	std::vector<ci::Vec3f>						mapDepthToCamera( const std::vector<ci::Vec2i>& v, const ci::Channel16u& depth ) const;
+	std::vector<ci::Vec3f>						mapDepthToCamera( const ci::Channel16u& depth ) const;
+	ci::Vec2i									mapDepthToColor( const ci::Vec2i& v, const ci::Channel16u& depth ) const;
+	std::vector<ci::Vec2i>						mapDepthToColor( const std::vector<ci::Vec2i>& v, const ci::Channel16u& depth ) const;
+	std::vector<ci::Vec2i>						mapDepthToColor( const ci::Channel16u& depth ) const;
 protected:
 	Device();
 
@@ -216,7 +237,6 @@ protected:
 
 	std::function<void ( Frame frame )>	mEventHandler;
 	
-	ICoordinateMapper*							mCoordinateMapper;
 	DeviceOptions								mDeviceOptions;
 	Frame										mFrame;
 	KCBHANDLE									mKinect;
@@ -250,12 +270,6 @@ public:
 	{
 	public:
 		ExcDeviceOpenFailed() throw();
-	};
-
-	class ExcGetCoordinateMapperFailed : public Exception 
-	{
-	public:
-		ExcGetCoordinateMapperFailed( long hr ) throw();
 	};
 };
 

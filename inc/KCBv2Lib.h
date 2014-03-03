@@ -58,7 +58,7 @@ extern "C"
     KINECT_CB HRESULT APIENTRY KCBGetLongExposureInfraredFrameBuffer(_In_ KCBHANDLE kcbHandle, ULONG cbBufferSize, _Inout_cap_(cbBufferSize) UINT16* pbBuffer, _Out_opt_ LONGLONG* liTimeStamp);
 
     // Coordinate mapper, caller must release the object
-    KINECT_CB HRESULT APIENTRY KCBGetCoordinateMapper(_In_ KCBHANDLE kcbHandle, _COM_Outptr_ ICoordinateMapper* ppCoordinateMapper);
+    KINECT_CB HRESULT APIENTRY KCBGetCoordinateMapper(_In_ KCBHANDLE kcbHandle, _COM_Outptr_ ICoordinateMapper** ppCoordinateMapper);
 
     // straight calls to the coordinate mapper
     KINECT_CB HRESULT APIENTRY KCBMapCameraPointToDepthSpace(_In_ KCBHANDLE kcbHandle, 

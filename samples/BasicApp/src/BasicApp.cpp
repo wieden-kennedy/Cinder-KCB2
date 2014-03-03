@@ -51,6 +51,7 @@ public:
 private:
 	Kinect2::DeviceRef			mDevice;
 	Kinect2::Frame				mFrame;
+	ci::Surface8u				mSurfaceColor;
 
 	float						mFrameRate;
 	bool						mFullScreen;
@@ -127,7 +128,7 @@ void BasicApp::update()
 		mFullScreen = isFullScreen();
 	}
 
-	if ( mDevice && mDevice->getFrame().getTimeStamp() > mFrame.getTimeStamp() ) {
+	if ( mDevice ) {
 		mFrame = mDevice->getFrame();
 	}
 }
