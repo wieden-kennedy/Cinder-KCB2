@@ -585,36 +585,6 @@ vector<Vec2i> Device::mapCameraToDepth( const vector<Vec3f>& v ) const
 	return p;
 }
 
-vector<Vec3f> Device::mapColorToCamera( const Surface8u& color ) const
-{
-	vector<Vec3f> p;
-	if ( color ) {
-		vector<CameraSpacePoint> camera( color.getWidth() * color.getHeight() );
-		// TODO implement after bug is fixed
-		//KCBMapColorFrameToCameraSpace();
-		for_each( camera.begin(), camera.end(), [ &p ]( const CameraSpacePoint& i )
-		{
-			p.push_back( toVec3f( i ) );
-		} );
-	}
-	return p;
-}
-
-vector<Vec2i> Device::mapColorToDepth( const Surface8u& color ) const
-{
-	vector<Vec2i> p;
-	if ( color ) {
-		vector<DepthSpacePoint> depth( color.getWidth() * color.getHeight() );
-		// TODO implement after bug is fixed
-		//KCBMapColorFrameToDepthSpace();
-		for_each( depth.begin(), depth.end(), [ &p ]( const DepthSpacePoint& i )
-		{
-			p.push_back( Vec2i( toVec2f( i ) ) );
-		} );
-	}
-	return p;
-}
-
 Vec3f Device::mapDepthToCamera( const Vec2i& v, const Channel16u& depth ) const
 {
 	CameraSpacePoint p;

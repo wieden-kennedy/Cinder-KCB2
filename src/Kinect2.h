@@ -222,8 +222,6 @@ public:
 	std::vector<ci::Vec2i>						mapCameraToColor( const std::vector<ci::Vec3f>& v ) const;
 	ci::Vec2i									mapCameraToDepth( const ci::Vec3f& v ) const;
 	std::vector<ci::Vec2i>						mapCameraToDepth( const std::vector<ci::Vec3f>& v ) const;
-	std::vector<ci::Vec3f>						mapColorToCamera( const ci::Surface8u& color ) const;
-	std::vector<ci::Vec2i>						mapColorToDepth( const ci::Surface8u& color ) const;
 	ci::Vec3f									mapDepthToCamera( const ci::Vec2i& v, const ci::Channel16u& depth ) const;
 	std::vector<ci::Vec3f>						mapDepthToCamera( const std::vector<ci::Vec2i>& v, const ci::Channel16u& depth ) const;
 	std::vector<ci::Vec3f>						mapDepthToCamera( const ci::Channel16u& depth ) const;
