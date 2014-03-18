@@ -19,14 +19,101 @@
     #endif // DLL_EXPORTS
 #endif //_WIN32
 
-#ifndef __KCBHANDLE__
-#define __KCBHANDLE__
+#ifndef __KCB_HANDLE__
+#define __KCB_HANDLE__
+
 typedef int KCBHANDLE;
+static const int KCB_INVALID_HANDLE = 0xffffffff;
+
 #endif
 
-#ifndef KCB_INVALID_HANDLE
-#define KCB_INVALID_HANDLE    0xffffffff
+#ifndef __KCB_FRAME_TYPES__
+#define __KCB_FRAME_TYPES__
+typedef enum _KCBFrameTypes
+{
+    KCBFrameTypes_Body = 0,
+    KCBFrameTypes_BodyIndex,
+    KCBFrameTypes_Color,
+    KCBFrameTypes_Depth,
+    KCBFrameTypes_Infrared,
+    KCBFrameTypes_LongExposureInfrared,
+    KCBFrameTypes_Count,
+    KCBFrameTypes_Unknown
+} KCBFrameTypes;
 #endif
+
+struct KCBBodyFrame
+{
+    UINT count;
+    IBody **ppBodies;
+    LONGLONG* llTimeStamp;
+
+    KCBBodyFrame()
+        : count(0), ppBodies(0), llTimeStamp(nullptr)
+    {
+    }
+};
+
+struct KCBBodyIndexFrame
+{
+    ULONG cbBufferSize;
+    BYTE* pbFrameBuffer;
+    LONGLONG* llTimeStamp;
+
+    KCBBodyIndexFrame()
+        : cbBufferSize(0), pbFrameBuffer(nullptr), llTimeStamp(nullptr)
+    {
+    }
+};
+
+struct KCBColorFrame
+{
+    ColorImageFormat eColorFormat; 
+    ULONG cbBufferSize; 
+    BYTE* pbFrameBuffer;
+    LONGLONG* llTimeStamp;
+
+    KCBColorFrame()
+        : cbBufferSize(0), pbFrameBuffer(nullptr), llTimeStamp(nullptr)
+    {
+    }
+};
+
+struct KCBDepthFrame
+{
+    ULONG cuiBufferSize;
+    UINT16* puiFrameBuffer;
+    LONGLONG* llTimeStamp;
+
+    KCBDepthFrame()
+        : cuiBufferSize(0), puiFrameBuffer(nullptr), llTimeStamp(nullptr)
+    {
+    }
+};
+
+struct KCBInfraredFrame
+{
+    ULONG cuiBufferSize;
+    UINT16* puiFrameBuffer;
+    LONGLONG* llTimeStamp;
+
+    KCBInfraredFrame()
+        : cuiBufferSize(0), puiFrameBuffer(nullptr), llTimeStamp(nullptr)
+    {
+    }
+};
+
+struct KCBLongExposureInfraredFrame
+{
+    ULONG cuiBufferSize;
+    UINT16* puiFrameBuffer;
+    LONGLONG* llTimeStamp;
+    
+    KCBLongExposureInfraredFrame()
+        : cuiBufferSize(0), puiFrameBuffer(nullptr), llTimeStamp(nullptr)
+    {
+    }
+};
 
 extern "C"
 {
@@ -35,30 +122,31 @@ extern "C"
     KINECT_CB HRESULT APIENTRY KCBSensorStatus(_In_ KCBHANDLE kcbHandle, _Inout_ KinectStatus* pStatus);
 
     // get the native IFrameDescription, caller must release the object
-    KINECT_CB HRESULT APIENTRY KCBGetBodyIndexFrameDescription(_In_ KCBHANDLE kcbHandle, _COM_Outptr_ IFrameDescription** ppFrameDescription);
-    KINECT_CB HRESULT APIENTRY KCBGetColorFrameDescription(_In_ KCBHANDLE kcbHandle, _COM_Outptr_ IFrameDescription** ppFrameDescription);
-    KINECT_CB HRESULT APIENTRY KCBGetDepthFrameDescription(_In_ KCBHANDLE kcbHandle, _COM_Outptr_ IFrameDescription** ppFrameDescription);
-    KINECT_CB HRESULT APIENTRY KCBGetInfraredFrameDescription(_In_ KCBHANDLE kcbHandle, _COM_Outptr_ IFrameDescription** ppFrameDescription);
-    KINECT_CB HRESULT APIENTRY KCBGetLongExposureInfraredFrameDescription(_In_ KCBHANDLE kcbHandle, _COM_Outptr_ IFrameDescription** ppFrameDescription);
-
-    // get the native IxxxFrame, caller must release the object
-    KINECT_CB HRESULT APIENTRY KCBGetBodyFrame(_In_ KCBHANDLE kcbHandle, _COM_Outptr_ IBodyFrame **ppBodyFrame);
-    KINECT_CB HRESULT APIENTRY KCBGetBodyIndexFrame(_In_ KCBHANDLE kcbHandle, _COM_Outptr_ IBodyIndexFrame **ppBodyIndexFrame);
-    KINECT_CB HRESULT APIENTRY KCBGetColorFrame(_In_ KCBHANDLE kcbHandle, _COM_Outptr_ IColorFrame **ppColorFrame);
-    KINECT_CB HRESULT APIENTRY KCBGetDepthFrame(_In_ KCBHANDLE kcbHandle, _COM_Outptr_ IDepthFrame **ppDepthFrame);
-    KINECT_CB HRESULT APIENTRY KCBGetInfraredFrame(_In_ KCBHANDLE kcbHandle, _COM_Outptr_ IInfraredFrame **ppInfraredFrame);
-    KINECT_CB HRESULT APIENTRY KCBGetLongExposureInfraredFrame(_In_ KCBHANDLE kcbHandle, _COM_Outptr_ ILongExposureInfraredFrame **ppLongExposureInfraredFrame);
+    KINECT_CB HRESULT APIENTRY KCBGetBodyIndexFrameDescription(_In_ KCBHANDLE kcbHandle, _COM_Outptr_result_maybenull_ IFrameDescription** ppFrameDescription);
+    KINECT_CB HRESULT APIENTRY KCBGetColorFrameDescription(_In_ KCBHANDLE kcbHandle, _COM_Outptr_result_maybenull_ IFrameDescription** ppFrameDescription);
+    KINECT_CB HRESULT APIENTRY KCBGetDepthFrameDescription(_In_ KCBHANDLE kcbHandle, _COM_Outptr_result_maybenull_ IFrameDescription** ppFrameDescription);
+    KINECT_CB HRESULT APIENTRY KCBGetInfraredFrameDescription(_In_ KCBHANDLE kcbHandle, _COM_Outptr_result_maybenull_ IFrameDescription** ppFrameDescription);
+    KINECT_CB HRESULT APIENTRY KCBGetLongExposureInfraredFrameDescription(_In_ KCBHANDLE kcbHandle, _COM_Outptr_result_maybenull_ IFrameDescription** ppFrameDescription);
 
     // copy methods just to get the buffer data
-    KINECT_CB HRESULT APIENTRY KCBGetBodies(_In_ KCBHANDLE kcbHandle, UINT capacity, _Inout_updates_all_(capacity) IBody **bodies, _Out_opt_ LONGLONG* liTimeStamp);
-    KINECT_CB HRESULT APIENTRY KCBGetBodyIndexFrameBuffer(_In_ KCBHANDLE kcbHandle, ULONG cbBufferSize, _Inout_cap_(cbBufferSize) BYTE* pbBuffer, _Out_opt_ LONGLONG* liTimeStamp);
-    KINECT_CB HRESULT APIENTRY KCBGetColorFrameAsBGRA(_In_ KCBHANDLE kcbHandle, ULONG cbBufferSize, _Inout_cap_(cbBufferSize) BYTE* pbBuffer, _Out_opt_ LONGLONG* liTimeStamp);
-    KINECT_CB HRESULT APIENTRY KCBGetDepthFrameBuffer(_In_ KCBHANDLE kcbHandle, ULONG cbBufferSize, _Inout_cap_(cbBufferSize) UINT16* pbBuffer, _Out_opt_ LONGLONG* liTimeStamp);
-    KINECT_CB HRESULT APIENTRY KCBGetInfraredFrameBuffer(_In_ KCBHANDLE kcbHandle, ULONG cbBufferSize, _Inout_cap_(cbBufferSize) UINT16* pbBuffer, _Out_opt_ LONGLONG* liTimeStamp);
-    KINECT_CB HRESULT APIENTRY KCBGetLongExposureInfraredFrameBuffer(_In_ KCBHANDLE kcbHandle, ULONG cbBufferSize, _Inout_cap_(cbBufferSize) UINT16* pbBuffer, _Out_opt_ LONGLONG* liTimeStamp);
+    KINECT_CB HRESULT APIENTRY KCBGetBodies(_In_ KCBHANDLE kcbHandle, UINT capacity, _Inout_updates_all_(capacity) IBody **bodies, _Out_opt_ LONGLONG* llTimeStamp);
+    KINECT_CB HRESULT APIENTRY KCBGetBodyIndexFrameBuffer(_In_ KCBHANDLE kcbHandle, ULONG cbBufferSize, _Inout_cap_(cbBufferSize) BYTE* pbBuffer, _Out_opt_ LONGLONG* llTimeStamp);
+    KINECT_CB HRESULT APIENTRY KCBGetColorFrameAsBGRA(_In_ KCBHANDLE kcbHandle, ULONG cbBufferSize, _Inout_cap_(cbBufferSize) BYTE* pbBuffer, _Out_opt_ LONGLONG* llTimeStamp);
+    KINECT_CB HRESULT APIENTRY KCBGetDepthFrameBuffer(_In_ KCBHANDLE kcbHandle, ULONG cuiBufferSize, _Inout_cap_(cuiBufferSize) UINT16* puiBuffer, _Out_opt_ LONGLONG* llTimeStamp);
+    KINECT_CB HRESULT APIENTRY KCBGetInfraredFrameBuffer(_In_ KCBHANDLE kcbHandle, ULONG cuiBufferSize, _Inout_cap_(cuiBufferSize) UINT16* puiBuffer, _Out_opt_ LONGLONG* llTimeStamp);
+    KINECT_CB HRESULT APIENTRY KCBGetLongExposureInfraredFrameBuffer(_In_ KCBHANDLE kcbHandle, ULONG cuiBufferSize, _Inout_cap_(cuiBufferSize) UINT16* puiBuffer, _Out_opt_ LONGLONG* llTimeStamp);
+    KINECT_CB HRESULT APIENTRY KCBGetMultipleFrameBuffers(_In_ KCBHANDLE kcbHandle, 
+        _Inout_opt_ KCBBodyFrame* pstBodyFrame,
+        _Inout_opt_ KCBBodyIndexFrame* pstBodyIndexFrame,
+        _Inout_opt_ KCBColorFrame* pstColorFrame,
+        _Inout_opt_ KCBDepthFrame* pstDepthFrame,
+        _Inout_opt_ KCBInfraredFrame* pstInfraredFrame,
+        _Inout_opt_ KCBLongExposureInfraredFrame* pstLongExposureInfraredFrame);
 
-    // Coordinate mapper, caller must release the object
-    KINECT_CB HRESULT APIENTRY KCBGetCoordinateMapper(_In_ KCBHANDLE kcbHandle, _COM_Outptr_ ICoordinateMapper** ppCoordinateMapper);
+    KINECT_CB bool APIENTRY KCBIsFrameReady(_In_ KCBHANDLE kcbHandle, KCBFrameTypes eFrameType);
+    KINECT_CB bool APIENTRY KCBAnyFrameReady(_In_ KCBHANDLE kcbHandle);
+    KINECT_CB bool APIENTRY KCBAllFramesReady(_In_ KCBHANDLE kcbHandle);
+    KINECT_CB bool APIENTRY KCBMultiFrameReady(_In_ KCBHANDLE kcbHandle);
 
     // straight calls to the coordinate mapper
     KINECT_CB HRESULT APIENTRY KCBMapCameraPointToDepthSpace(_In_ KCBHANDLE kcbHandle, 
@@ -110,5 +198,18 @@ extern "C"
     KINECT_CB HRESULT APIENTRY GetDepthFrameToCameraSpaceTable(_In_ KCBHANDLE kcbHandle,
         _Out_  UINT32 *tableEntryCount,
         _Outptr_result_bytebuffer_(*tableEntryCount) PointF **tableEntries);
+
+    // Coordinate mapper, caller must release the object
+    KINECT_CB HRESULT APIENTRY KCBGetCoordinateMapper(_In_ KCBHANDLE kcbHandle, _COM_Outptr_result_maybenull_ ICoordinateMapper* ppCoordinateMapper);
+
+    // get the native IxxxFrame, caller must release the object
+    // if you just want the data, use the other frame functions.
+    KINECT_CB HRESULT APIENTRY KCBGetBodyFrame(_In_ KCBHANDLE kcbHandle, _COM_Outptr_result_maybenull_ IBodyFrame **ppBodyFrame);
+    KINECT_CB HRESULT APIENTRY KCBGetBodyIndexFrame(_In_ KCBHANDLE kcbHandle, _COM_Outptr_result_maybenull_ IBodyIndexFrame **ppBodyIndexFrame);
+    KINECT_CB HRESULT APIENTRY KCBGetColorFrame(_In_ KCBHANDLE kcbHandle, _COM_Outptr_result_maybenull_ IColorFrame **ppColorFrame);
+    KINECT_CB HRESULT APIENTRY KCBGetDepthFrame(_In_ KCBHANDLE kcbHandle, _COM_Outptr_result_maybenull_ IDepthFrame **ppDepthFrame);
+    KINECT_CB HRESULT APIENTRY KCBGetInfraredFrame(_In_ KCBHANDLE kcbHandle, _COM_Outptr_result_maybenull_ IInfraredFrame **ppInfraredFrame);
+    KINECT_CB HRESULT APIENTRY KCBGetLongExposureInfraredFrame(_In_ KCBHANDLE kcbHandle, _COM_Outptr_result_maybenull_ ILongExposureInfraredFrame **ppLongExposureInfraredFrame);
+    KINECT_CB HRESULT APIENTRY KCBGetMultiSourceFrame(_In_ KCBHANDLE kcbHandle, DWORD dwFrameSourceTypes, _COM_Outptr_result_maybenull_ IMultiSourceFrame **ppMultiSourceFrame);
 
 }

@@ -461,6 +461,16 @@ const Channel16u& Frame::getDepth() const
 	return mChannelDepth;
 }
 
+Vec2i Frame::getColorSize() const
+{
+	return Vec2i( 1920, 1080 ); 
+}
+
+Vec2i Frame::getDepthSize() const 
+{ 
+	return Vec2i( 512, 424 ); 
+}
+
 float Frame::getFovDiagonal() const
 {
 	return mFovDiagonal;

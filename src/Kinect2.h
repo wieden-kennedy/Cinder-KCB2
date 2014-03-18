@@ -172,10 +172,13 @@ public:
 
 	Frame();
 
+
 	const std::vector<Body>&					getBodies() const;
 	const ci::Channel8u&						getBodyIndex() const;
 	const ci::Surface8u&						getColor() const;
+	ci::Vec2i									getColorSize() const;
 	const ci::Channel16u&						getDepth() const;
+	ci::Vec2i									getDepthSize() const;
 	float										getFovDiagonal() const;
 	float										getFovHorizontal() const;
 	float										getFovVertical() const;
