@@ -105,9 +105,6 @@ protected:
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-//! Microsoft FaceTracking API wrapper for use with the Kinect.
-class FaceTracker
-{
 protected:
 	typedef std::shared_ptr<std::thread>	ThreadRef;
 public:
@@ -244,5 +241,6 @@ public:
 		ExcFaceTrackerNuiInit( long hr ) throw();
 	};
 };
+
 }
  

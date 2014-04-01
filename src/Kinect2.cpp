@@ -199,6 +199,15 @@ CameraSpacePoint toCameraSpacePoint( const Vec3f& v )
 	return p;
 }
 
+CameraSpacePoint toCameraSpacePoint( const Vec3f& v )
+{
+	CameraSpacePoint p;
+	p.X = v.x;
+	p.Y = v.y;
+	p.Z = v.z;
+	return p;
+}
+
 ColorSpacePoint	toColorSpacePoint( const Vec2f& v )
 {
 	ColorSpacePoint p;
@@ -494,11 +503,6 @@ Vec2i Frame::getColorSize()
 	return Vec2i( 1920, 1080 ); 
 }
 
-Vec2i Frame::getDepthSize() 
-{ 
-	return Vec2i( 512, 424 ); 
-}
-
 const vector<Body>& Frame::getBodies() const
 {
 	return mBodies;
@@ -514,9 +518,19 @@ const Surface8u& Frame::getColor() const
 	return mSurfaceColor;
 }
 
+Vec2i Frame::getColorSize() const
+{
+	return Vec2i( 1920, 1080 ); 
+}
+
 const Channel16u& Frame::getDepth() const
 {
 	return mChannelDepth;
+}
+
+Vec2i Frame::getDepthSize() const 
+{ 
+	return Vec2i( 512, 424 ); 
 }
 
 float Frame::getFovDiagonal() const
@@ -594,6 +608,144 @@ const Frame& Device::getFrame() const
 //{
 //	return mStatus;
 //}
+
+Vec2i Device::mapCameraToColor( const Vec3f& v ) const
+{
+	ColorSpacePoint p;
+	KCBMapCameraPointToColorSpace( mKinect, toCameraSpacePoint( v ), &p ); 
+	return Vec2i( toVec2f( p ) );
+}
+
+vector<Vec2i> Device::mapCameraToColor( const vector<Vec3f>& v ) const
+{
+	vector<Vec2i> p;
+	vector<CameraSpacePoint> camera;
+	vector<ColorSpacePoint> color;
+	for_each( v.begin(), v.end(), [ &camera ]( const Vec3f& i )
+	{
+		camera.push_back( toCameraSpacePoint( i ) );
+	} );
+	KCBMapCameraPointsToColorSpace( mKinect, camera.size(), &camera[ 0 ], color.size(), &color[ 0 ] );
+	for_each( color.begin(), color.end(), [ &p ]( const ColorSpacePoint& i )
+	{
+		p.push_back( Vec2i( toVec2f( i ) ) );
+	} );
+	return p;
+}
+
+Vec2i Device::mapCameraToDepth( const Vec3f& v ) const
+{
+	DepthSpacePoint p;
+	KCBMapCameraPointToDepthSpace( mKinect, toCameraSpacePoint( v ), &p ); 
+	return Vec2i( toVec2f( p ) );
+}
+
+vector<Vec2i> Device::mapCameraToDepth( const vector<Vec3f>& v ) const
+{
+	vector<Vec2i> p;
+	vector<CameraSpacePoint> camera;
+	vector<DepthSpacePoint> depth( v.size() );
+	for_each( v.begin(), v.end(), [ &camera ]( const Vec3f& i )
+	{
+		camera.push_back( toCameraSpacePoint( i ) );
+	} );
+	KCBMapCameraPointsToDepthSpace( mKinect, camera.size(), &camera[ 0 ], depth.size(), &depth[ 0 ] );
+	for_each( depth.begin(), depth.end(), [ &p ]( const DepthSpacePoint& i )
+	{
+		p.push_back( Vec2i( toVec2f( i ) ) );
+	} );
+	return p;
+}
+
+Vec3f Device::mapDepthToCamera( const Vec2i& v, const Channel16u& depth ) const
+{
+	CameraSpacePoint p;
+	if ( depth ) {
+		uint16_t d = depth.getValue( v );
+		KCBMapDepthPointToCameraSpace( mKinect, toDepthSpacePoint( v ), d, &p ); 
+	}
+	return toVec3f( p );
+}
+
+vector<Vec3f> Device::mapDepthToCamera( const vector<Vec2i>& v, const Channel16u& depth ) const
+{
+	vector<Vec3f> p;
+	if ( depth ) {
+		vector<CameraSpacePoint> camera( v.size() );
+		vector<DepthSpacePoint> depthPos;
+		vector<uint16_t> depthVal;
+		for_each( v.begin(), v.end(), [ &depth, &depthPos, &depthVal ]( const Vec2i& i )
+		{
+			depthPos.push_back( toDepthSpacePoint( i ) );
+			depthVal.push_back( depth.getValue( i ) );
+		} );
+		KCBMapDepthPointsToCameraSpace( mKinect, depthPos.size(), &depthPos[ 0 ], depthPos.size(), &depthVal[ 0 ], camera.size(), &camera[ 0 ] );
+		for_each( camera.begin(), camera.end(), [ &p ]( const CameraSpacePoint& i )
+		{
+			p.push_back( toVec3f( i ) );
+		} );
+	}
+	return p;
+}
+
+vector<Vec3f> Device::mapDepthToCamera( const Channel16u& depth ) const
+{
+	vector<Vec3f> p;
+	if ( depth ) {
+		vector<CameraSpacePoint> camera( depth.getWidth() * depth.getHeight() );
+		KCBMapDepthFrameToCameraSpace( mKinect, camera.size(), depth.getData(), camera.size(), &camera[ 0 ] );
+		for_each( camera.begin(), camera.end(), [ &p ]( const CameraSpacePoint& i )
+		{
+			p.push_back( toVec3f( i ) );
+		} );
+	}
+	return p;
+}
+
+Vec2i Device::mapDepthToColor( const Vec2i& v, const Channel16u& depth ) const
+{
+	ColorSpacePoint p;
+	if ( depth ) {
+		uint16_t d = depth.getValue( v );
+		KCBMapDepthPointToColorSpace( mKinect, toDepthSpacePoint( v ), d, &p ); 
+	}
+	return Vec2i( toVec2f( p ) );
+}
+
+vector<Vec2i> Device::mapDepthToColor( const Channel16u& depth ) const
+{
+	vector<Vec2i> p;
+	if ( depth ) {
+		vector<ColorSpacePoint> color( depth.getWidth() * depth.getHeight() );
+		KCBMapDepthFrameToColorSpace( mKinect, color.size(), depth.getData(), color.size(), &color[ 0 ] );
+		for_each( color.begin(), color.end(), [ &p ]( const ColorSpacePoint& i )
+		{
+			p.push_back( Vec2i( toVec2f( i ) ) );
+		} );
+	}
+	return p;
+}
+
+vector<Vec2i> Device::mapDepthToColor( const vector<Vec2i>& v, const Channel16u& depth ) const
+{
+	vector<Vec2i> p;
+	if ( depth ) {
+		vector<ColorSpacePoint> color( v.size() );
+		vector<DepthSpacePoint> depthPos;
+		vector<uint16_t> depthVal;
+		for_each( v.begin(), v.end(), [ &depth, &depthPos, &depthVal ]( const Vec2i& i )
+		{
+			depthPos.push_back( toDepthSpacePoint( i ) );
+			depthVal.push_back( depth.getValue( i ) );
+		} );
+		KCBMapDepthPointsToColorSpace( mKinect, depthPos.size(), &depthPos[ 0 ], depthPos.size(), &depthVal[ 0 ], color.size(), &color[ 0 ] );
+		for_each( color.begin(), color.end(), [ &p ]( const ColorSpacePoint& i )
+		{
+			p.push_back( Vec2i( toVec2f( i ) ) );
+		} );
+	}
+	return p;
+}
 
 Vec2i Device::mapCameraToColor( const Vec3f& v ) const
 {
