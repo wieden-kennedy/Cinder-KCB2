@@ -43,6 +43,12 @@
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</LinkIncremental>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>$(SolutionDir)bin\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(SolutionDir)bin\</OutDir>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
@@ -70,12 +76,12 @@
       <IgnoreSpecificDefaultLibraries>LIBCMT;LIBCPMT</IgnoreSpecificDefaultLibraries>
     </Link>
     <PreBuildEvent>
-      <Command>xcopy /e /i /y "$(SolutionDir)..\..\..\dll\*.dll" "$(SolutionDir)bin\"</Command>
+      <Command>xcopy /e /i /y "$(SolutionDir)..\..\..\dll\$(PlatformTarget)\*.dll" "$(SolutionDir)bin\"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\include;..\..\..\src;..\..\..\..\..\include;..\..\..\..\..\boost;$(KINECTSDK20_DIR)\inc</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\include;..\..\..\src;..\..\..\..\..\include;..\..\..\..\..\boost;$(KINECTSDK20_DIR)\inc;..\..\..\inc</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;NOMINMAX;_WIN32_WINNT=0x0502;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PrecompiledHeader>
@@ -104,7 +110,7 @@
       </DataExecutionPrevention>
     </Link>
     <PreBuildEvent>
-      <Command>xcopy /e /i /y "$(SolutionDir)..\..\..\dll\*.dll" "$(SolutionDir)bin\"</Command>
+      <Command>xcopy /e /i /y "$(SolutionDir)..\..\..\dll\$(PlatformTarget)\*.dll" "$(SolutionDir)bin\"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

@@ -144,7 +144,7 @@
       <AdditionalIncludeDirectories>../../../../../include</AdditionalIncludeDirectories>
     </ResourceCompile>
     <PreBuildEvent>
-      <Command>xcopy /e /i /y "$(SolutionDir)..\..\..\dll\*.dll" "$(SolutionDir)bin\"</Command>
+      <Command>xcopy /e /i /y "$(SolutionDir)..\..\..\dll\$(PlatformTarget)\*.dll" "$(SolutionDir)bin\"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -211,7 +211,7 @@
       <AdditionalIncludeDirectories>../../../../../include</AdditionalIncludeDirectories>
     </ResourceCompile>
     <PreBuildEvent>
-      <Command>xcopy /e /i /y "$(SolutionDir)..\..\..\dll\*.dll" "$(SolutionDir)bin\"</Command>
+      <Command>xcopy /e /i /y "$(SolutionDir)..\..\..\dll\$(PlatformTarget)\*.dll" "$(SolutionDir)bin\"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
