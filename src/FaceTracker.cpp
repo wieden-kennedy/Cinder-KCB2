@@ -83,6 +83,80 @@ size_t Face::getUserId() const
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
+FaceTrackerOptions::FaceTrackerOptions()
+: mColorFovHorizontal( 0.0f ), mColorFovVertical( 0.0f ), mColorSize( 1920, 1080 ), 
+mDepthFovHorizontal( 0.0f ), mDepthFovVertical( 0.0f ), mDepthSize( 512, 424 )
+{
+}
+
+FaceTrackerOptions& FaceTrackerOptions::setColorFovHorizontal( float fov )
+{
+	mColorFovHorizontal = fov;
+	return *this;
+}
+
+FaceTrackerOptions& FaceTrackerOptions::setColorFovVertical( float fov )
+{
+	mColorFovVertical = fov;
+	return *this;
+}
+
+FaceTrackerOptions& FaceTrackerOptions::setColorSize( const Vec2i& sz )
+{
+	mColorSize = sz;
+	return *this;
+}
+
+FaceTrackerOptions& FaceTrackerOptions::setDepthFovHorizontal( float fov )
+{
+	mDepthFovHorizontal = fov;
+	return *this;
+}
+
+FaceTrackerOptions& FaceTrackerOptions::setDepthFovVertical( float fov )
+{
+	mDepthFovVertical = fov;
+	return *this;
+}
+
+FaceTrackerOptions& FaceTrackerOptions::setDepthSize( const Vec2i& sz )
+{
+	mDepthSize = sz;
+	return *this;
+}
+
+float FaceTrackerOptions::getColorFovHorizontal() const
+{
+	return mColorFovHorizontal;
+}
+
+float FaceTrackerOptions::getColorFovVertical() const
+{
+	return mColorFovVertical;
+}
+
+const Vec2i& FaceTrackerOptions::getColorSize() const
+{
+	return mColorSize;
+}
+
+float FaceTrackerOptions::getDepthFovHorizontal() const
+{
+	return mDepthFovHorizontal;
+}
+
+float FaceTrackerOptions::getDepthFovVertical() const
+{
+	return mDepthFovVertical;
+}
+
+const Vec2i& FaceTrackerOptions::getDepthSize() const
+{
+	return mDepthSize;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
 FaceTrackerRef FaceTracker::create()
 {
 	return FaceTrackerRef( new FaceTracker() );
@@ -198,31 +272,39 @@ bool FaceTracker::isTracking() const
 	return mRunning;
 }
 
-void FaceTracker::start()
+void FaceTracker::start( const FaceTrackerOptions& faceTrackerOptions )
 {
 	stop();
 
-	mConfigColor.Height			= 480;
-	mConfigColor.Width			= 640;
-	mConfigColor.FocalLength	= 531.15f;
-
-	mConfigDepth.Height			= 240;
-	mConfigDepth.Width			= 320;
-	mConfigDepth.FocalLength	= 285.63f;
-
 	long hr			= S_OK;
+	
+	hr = NuiInitialize( NUI_INITIALIZE_FLAG_USES_DEPTH_AND_PLAYER_INDEX | NUI_INITIALIZE_FLAG_USES_SKELETON | 
+						NUI_INITIALIZE_FLAG_USES_COLOR );
+	if ( FAILED( hr ) ) {
+		throw ExcFaceTrackerNuiInit( hr );
+	}
+	
 	mFaceTracker	= FTCreateFaceTracker();
     if ( !mFaceTracker ) {
 		throw ExcFaceTrackerCreate();
 	}
 
-	hr = NuiInitialize( NUI_INITIALIZE_FLAG_USES_DEPTH | 
-						NUI_INITIALIZE_FLAG_USES_COLOR );
-	if ( FAILED( hr ) ) {
-		throw ExcFaceTrackerNuiInit( hr );
-	}
+	mConfigColor.Height			= faceTrackerOptions.getColorSize().y;
+	mConfigColor.Width			= faceTrackerOptions.getColorSize().x;
+	mConfigColor.FocalLength	= calcFocalLength( 
+		faceTrackerOptions.getColorSize(), 
+		faceTrackerOptions.getColorFovHorizontal(), 
+		faceTrackerOptions.getColorFovVertical() 
+		);
 
-	//hr = mFaceTracker->Initialize( &mConfigColor, &mConfigDepth, FTRegisterDepthToColor( FaceTracker::depthToColor ), 0 );
+	mConfigDepth.Height			= faceTrackerOptions.getDepthSize().y;
+	mConfigDepth.Width			= faceTrackerOptions.getDepthSize().x;
+	mConfigDepth.FocalLength	= calcFocalLength( 
+		faceTrackerOptions.getDepthSize(), 
+		faceTrackerOptions.getDepthFovHorizontal(), 
+		faceTrackerOptions.getDepthFovVertical() 
+		);
+
 	hr = mFaceTracker->Initialize( &mConfigColor, &mConfigDepth, 0, 0 );
 	if ( FAILED( hr ) ) {
 		throw ExcFaceTrackerInit( hr );
@@ -255,18 +337,31 @@ void FaceTracker::stop()
 	NuiShutdown();
 }
 
-void FaceTracker::update( const Channel16u& infrared, const Vec3f headPoints[ 2 ], size_t userId )
+void FaceTracker::update( const Surface8u& color, const Channel16u& depth, const Vec3f headPoints[ 2 ], size_t userId )
 {
 	if ( mNewFace && mEventHandler != nullptr ) {
 		mEventHandler( mFace );
-		if ( infrared ) {
+		if ( color && depth ) {
 			mHeadPoints.clear();
 			if ( headPoints != nullptr ) {
 				mHeadPoints.push_back( headPoints[ 0 ] );
 				mHeadPoints.push_back( headPoints[ 1 ] );
 			}
-			mChannelInfraredOriginal	= infrared;
-			mUserId						= userId;	
+			bool attachDepth = !mChannelDepth;
+			bool attachVideo = !mSurfaceColor;
+
+			mChannelDepth	= depth;
+			mSurfaceColor	= color;
+			mUserId			= userId;	
+
+			if ( attachDepth ) {
+				mSensorData.pDepthFrame->Attach( mChannelDepth.getWidth(), mChannelDepth.getHeight(), 
+					(void*)mChannelDepth.getData(), FTIMAGEFORMAT_UINT16_D13P3, mChannelDepth.getRowBytes() );
+			}
+			if ( attachVideo ) {
+				mSensorData.pVideoFrame->Attach( mSurfaceColor.getWidth(), mSurfaceColor.getHeight(), 
+					(void*)mSurfaceColor.getData(), FTIMAGEFORMAT_UINT8_B8G8R8X8, mSurfaceColor.getRowBytes() );
+			}
 		}
 		mNewFace = false;
 	}
@@ -281,32 +376,6 @@ void FaceTracker::run()
 {
 	while ( mRunning ) {
 		if ( !mNewFace ) {
-			if ( mChannelInfraredOriginal ) {
-				bool attachDepth = !mChannelInfrared;
-				bool attachVideo = !mSurfaceInfrared;
-
-				if ( !mChannelColor ) {
-					mChannelColor = Channel32f( 640, 480 );
-				}
-				if ( !mChannelDepth ) {
-					mChannelDepth = Channel32f( 320, 240 );
-				}
-				ip::resize( Channel32f( mChannelInfraredOriginal ), &mChannelColor );
-				ip::resize( Channel32f( mChannelInfraredOriginal ), &mChannelDepth );
-
-				mChannelInfrared = Channel16u( mChannelDepth );
-				mSurfaceInfrared = Surface8u( mChannelColor );
-
-				if ( attachDepth ) {
-					mSensorData.pDepthFrame->Attach( mChannelInfrared.getWidth(), mChannelInfrared.getHeight(), 
-						(void*)mChannelInfrared.getData(), FTIMAGEFORMAT_UINT16_D13P3, mChannelInfrared.getRowBytes() );
-				}
-				if ( attachVideo ) {
-					mSensorData.pVideoFrame->Attach( mSurfaceInfrared.getWidth(), mSurfaceInfrared.getHeight(), 
-						(void*)mSurfaceInfrared.getData(), FTIMAGEFORMAT_UINT8_R8G8B8, mSurfaceInfrared.getRowBytes() );
-				}
-			}
-
 			long hr = S_OK;
 
 			mFace.mAnimationUnits.clear();
@@ -440,15 +509,16 @@ void FaceTracker::run()
 	}
 }
 
-HRESULT FTAPI FaceTracker::depthToColor( UINT depthFrameWidth, UINT depthFrameHeight, 
-										 UINT colorFrameWidth, UINT colorFrameHeight, 
-										 FLOAT zoomFactor, POINT viewOffset, 
-										 LONG depthX, LONG depthY, USHORT depthZ, 
-										 LONG* pColorX, LONG* pColorY )
+float FaceTracker::calcFocalLength( const Vec2i& sz, float xFov, float yFov )
 {
-    *pColorX = depthX * 2;
-    *pColorY = depthY * 2;
-    return S_OK;
+	float x		= (float)sz.x;
+	float y		= (float)sz.y;
+	float tx	= math<float>::tan( toRadians( xFov ) * 0.5f ) * 2.0f;
+	float ty	= math<float>::tan( toRadians( yFov ) * 0.5f ) * 2.0f;
+	float fx	= x / tx;
+	float fy	= y / ty;
+	float f		= ( fx + fy ) * 0.5f;
+	return f;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////

@@ -105,8 +105,42 @@ protected:
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
+class FaceTrackerOptions
+{
+public:
+	FaceTrackerOptions();
+
+	FaceTrackerOptions&				setColorFovHorizontal( float fov );
+	FaceTrackerOptions&				setColorFovVertical( float fov );
+	FaceTrackerOptions&				setColorSize( const ci::Vec2i& sz );
+	FaceTrackerOptions&				setDepthFovHorizontal( float fov );
+	FaceTrackerOptions&				setDepthFovVertical( float fov );
+	FaceTrackerOptions&				setDepthSize( const ci::Vec2i& sz );
+
+	float							getColorFovHorizontal() const;
+	float							getColorFovVertical() const;
+	const ci::Vec2i&				getColorSize() const;
+	float							getDepthFovHorizontal() const;
+	float							getDepthFovVertical() const;
+	const ci::Vec2i&				getDepthSize() const;
 protected:
-	typedef std::shared_ptr<std::thread>	ThreadRef;
+	float							mColorFovHorizontal;
+	float							mColorFovVertical;
+	ci::Vec2i						mColorSize;
+	float							mDepthFovHorizontal;
+	float							mDepthFovVertical;
+	ci::Vec2i						mDepthSize;
+
+	friend class					FaceTracker;
+};
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+class FaceTracker 
+{
+protected:
+	typedef std::shared_ptr<std::thread> ThreadRef;
 public:
 	/*! Creates pointer to instance of FaceTracker. Tracks one face at a 
 		time. For multiple faces, create multiple FaceTracker instances 
@@ -137,16 +171,16 @@ public:
 	//! Returns true if face tracker is running.
 	bool							isTracking() const;
 
-	//! Start face tracking, allocating buffers based on \a deviceOptions.
-	virtual void					start();
+	//! Start face tracking, allocating buffers based on \a faceTrackerOptions.
+	virtual void					start( const FaceTrackerOptions& faceTrackerOptions = FaceTrackerOptions() );
 	//! Stop face tracking
 	virtual void					stop();
 	
-	/*! Update \a infrared image from Kinect2. Pass head and 
+	/*! Update \a color and \a depth images from Kinect2. Pass head and 
 		neck points together, in order, through \a headPoints to target a user. 
 		The value passed to \a userId will be returned from Face::getUserId() in 
 		the event handler's face argument. */
-	virtual void					update( const ci::Channel16u& infrared, 
+	virtual void					update( const ci::Surface8u& color, const ci::Channel16u& depth, 
 		const ci::Vec3f headPoints[ 2 ] = nullptr, size_t userId = 0 );
 
 	
@@ -170,12 +204,11 @@ protected:
 	ThreadRef						mThread;
 	virtual void					run();
 
+	float							calcFocalLength( const ci::Vec2i& sz, float xFov, float yFov );
 	bool							mCalcMesh;
 	bool							mCalcMesh2d;
-	ci::Channel32f					mChannelColor;
-	ci::Channel32f					mChannelDepth;
-	ci::Channel16u					mChannelInfrared;
-	ci::Channel16u					mChannelInfraredOriginal;
+	ci::Surface8u					mSurfaceColor;
+	ci::Channel16u					mChannelDepth;
 	FT_CAMERA_CONFIG				mConfigColor;
 	FT_CAMERA_CONFIG				mConfigDepth;
 	Face							mFace;
@@ -185,14 +218,7 @@ protected:
 	IFTResult*						mResult;
 	FT_SENSOR_DATA					mSensorData;
 	bool							mSuccess;
-	ci::Surface8u					mSurfaceInfrared;
 	size_t							mUserId;
-
-	static HRESULT FTAPI			depthToColor( UINT depthFrameWidth, UINT depthFrameHeight, 
-												  UINT colorFrameWidth, UINT colorFrameHeight, 
-												  FLOAT zoomFactor, POINT viewOffset, 
-												  LONG depthX, LONG depthY, USHORT depthZ, 
-												  LONG* pColorX, LONG* pColorY );
 public:
 
 	//////////////////////////////////////////////////////////////////////////////////////////////

@@ -175,15 +175,19 @@ public:
 
 	Frame();
 
+	static ci::Vec2i							getColorSize();
+	static ci::Vec2i							getDepthSize();
+
 	const std::vector<Body>&					getBodies() const;
 	const ci::Channel8u&						getBodyIndex() const;
 	const ci::Surface8u&						getColor() const;
-	ci::Vec2i									getColorSize() const;
+	float										getColorFovDiagonal() const;
+	float										getColorFovHorizontal() const;
+	float										getColorFovVertical() const;
 	const ci::Channel16u&						getDepth() const;
-	ci::Vec2i									getDepthSize() const;
-	float										getFovDiagonal() const;
-	float										getFovHorizontal() const;
-	float										getFovVertical() const;
+	float										getDepthFovDiagonal() const;
+	float										getDepthFovHorizontal() const;
+	float										getDepthFovVertical() const;
 	const ci::Channel16u&						getInfrared() const;
 	const ci::Channel16u&						getInfraredLongExposure() const;
 	uint16_t									getMaxReliableDepthDistance() const;
@@ -197,9 +201,12 @@ protected:
 	ci::Channel16u								mChannelInfraredLongExposure;
 	uint16_t									mDepthMaxReliableDistance;
 	uint16_t									mDepthMinReliableDistance;
-	float										mFovDiagonal;
-	float										mFovHorizontal;
-	float										mFovVertical;
+	float										mFovDiagonalColor;
+	float										mFovHorizontalColor;
+	float										mFovVerticalColor;
+	float										mFovDiagonalDepth;
+	float										mFovHorizontalDepth;
+	float										mFovVerticalDepth;
 	ci::Surface8u								mSurfaceColor;
 	std::map<TimeStamp, long long>				mTimeStamp;
 
