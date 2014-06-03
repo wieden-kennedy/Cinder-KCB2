@@ -121,7 +121,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\..\..\src;..\..\..\..\..\include;..\..\..\..\..\boost;$(KINECTSDK20_DIR)\inc;..\..\..\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\src;..\..\..\..\..\include;..\..\..\..\..\boost;$(KINECTSDK20_DIR)\inc;..\..\..\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -144,7 +144,7 @@
       <AdditionalIncludeDirectories>../../../../../include</AdditionalIncludeDirectories>
     </ResourceCompile>
     <PreBuildEvent>
-      <Command>xcopy /e /i /y "$(SolutionDir)..\..\..\dll\$(PlatformTarget)\*.dll" "$(SolutionDir)bin\"</Command>
+      <Command>xcopy /e /i /y "$(SolutionDir)..\..\..\lib\$(PlatformTarget)\*.dll" "$(SolutionDir)bin\"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -183,7 +183,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\..\..\src;..\..\..\..\..\include;..\..\..\..\..\boost;$(KINECTSDK20_DIR)\inc;..\..\..\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\src;..\..\..\..\..\include;..\..\..\..\..\boost;$(KINECTSDK20_DIR)\inc;..\..\..\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PrecompiledHeader>
@@ -211,7 +211,7 @@
       <AdditionalIncludeDirectories>../../../../../include</AdditionalIncludeDirectories>
     </ResourceCompile>
     <PreBuildEvent>
-      <Command>xcopy /e /i /y "$(SolutionDir)..\..\..\dll\$(PlatformTarget)\*.dll" "$(SolutionDir)bin\"</Command>
+      <Command>xcopy /e /i /y "$(SolutionDir)..\..\..\lib\$(PlatformTarget)\*.dll" "$(SolutionDir)bin\"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -225,7 +225,7 @@
     <ResourceCompile Include="Resources.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\inc\KCBv2Lib.h" />
+    <ClInclude Include="..\..\..\lib\KCBv2Lib.h" />
     <ClInclude Include="..\..\..\src\Kinect2.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

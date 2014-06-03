@@ -790,35 +790,30 @@ void Device::update()
 
 	Frame frame;
 	
-	std::function<Vec2i( IFrameDescription*, bool )> processFrame = [ &frame ]( IFrameDescription* frameDescription, bool colorFrame )
+	std::function<Vec2i( KCBFrameDescription*, bool )> processFrame = [ &frame ]( KCBFrameDescription* frameDescription, bool colorFrame )
 	{
 		Vec2i sz = Vec2i::zero();
-		long hr = S_OK;
-		if ( SUCCEEDED( hr ) ) {
-			hr = frameDescription->get_Height( &sz.y );
-		}
-		if ( SUCCEEDED( hr ) ) {
-			hr = frameDescription->get_Width( &sz.x );
-		}
+		sz.x = frameDescription->width;
+		sz.y = frameDescription->height;
 		if ( colorFrame ) {
-			if ( SUCCEEDED( hr ) && frame.mFovDiagonalColor <= 0.0f ) {
-				hr = frameDescription->get_DiagonalFieldOfView( &frame.mFovDiagonalColor );
+			if ( frame.mFovDiagonalColor <= 0.0f ) {
+				frame.mFovDiagonalColor = frameDescription->diagonalFieldOfView;
 			}
-			if ( SUCCEEDED( hr ) && frame.mFovHorizontalColor <= 0.0f ) {
-				hr = frameDescription->get_HorizontalFieldOfView( &frame.mFovHorizontalColor );
+			if ( frame.mFovHorizontalColor <= 0.0f ) {
+				frame.mFovHorizontalColor = frameDescription->horizontalFieldOfView;
 			}
-			if ( SUCCEEDED( hr ) && frame.mFovVerticalColor <= 0.0f ) {
-				hr = frameDescription->get_VerticalFieldOfView( &frame.mFovVerticalColor );
+			if ( frame.mFovVerticalColor <= 0.0f ) {
+				frame.mFovVerticalColor = frameDescription->verticalFieldOfView;
 			}
 		} else {
-			if ( SUCCEEDED( hr ) && frame.mFovDiagonalDepth <= 0.0f ) {
-				hr = frameDescription->get_DiagonalFieldOfView( &frame.mFovDiagonalDepth );
+			if ( frame.mFovDiagonalDepth <= 0.0f ) {
+				frame.mFovDiagonalDepth = frameDescription->diagonalFieldOfView;
 			}
-			if ( SUCCEEDED( hr ) && frame.mFovHorizontalDepth <= 0.0f ) {
-				hr = frameDescription->get_HorizontalFieldOfView( &frame.mFovHorizontalDepth );
+			if ( frame.mFovHorizontalDepth <= 0.0f ) {
+				frame.mFovHorizontalDepth = frameDescription->horizontalFieldOfView;
 			}
-			if ( SUCCEEDED( hr ) && frame.mFovVerticalDepth <= 0.0f ) {
-				hr = frameDescription->get_VerticalFieldOfView( &frame.mFovVerticalDepth );
+			if ( frame.mFovVerticalDepth <= 0.0f ) {
+				frame.mFovVerticalDepth = frameDescription->verticalFieldOfView;
 			}
 		}
 		return sz;
@@ -837,7 +832,7 @@ void Device::update()
 		int64_t timeStamp					= 0L;
 		IBody* kinectBodies[ BODY_COUNT ]	= { 0 };
 		
-		long hr = KCBGetBodies( mKinect, BODY_COUNT, kinectBodies, &timeStamp );
+		long hr = KCBGetBodyData( mKinect, BODY_COUNT, kinectBodies, &timeStamp );
 		if ( SUCCEEDED( hr ) ) {
 			for ( uint8_t i = 0; i < 6; ++i ) {
 				IBody* kinectBody = kinectBodies[ i ];
@@ -878,15 +873,15 @@ void Device::update()
 	}
 
 	if ( mDeviceOptions.isBodyIndexEnabled() ) {
-		IFrameDescription* frameDescription	= nullptr;
+		KCBFrameDescription* frameDescription	= nullptr;
 		Vec2i sz							= Vec2i::zero();
 		int64_t timeStamp					= 0L;
 		
-		long hr = KCBGetBodyIndexFrameDescription( mKinect, &frameDescription );
+		long hr = KCBGetBodyIndexFrameDescription( mKinect, frameDescription );
 		sz = processFrame( frameDescription, false );
 		if ( SUCCEEDED( hr ) ) {
 			frame.mChannelBodyIndex = Channel8u( sz.x, sz.y );
-			KCBGetBodyIndexFrameBuffer( mKinect, sz.x * sz.y * sizeof( uint8_t ), frame.mChannelBodyIndex.getData(), &timeStamp );
+			KCBGetBodyIndexFrame( mKinect, frame.mChannelBodyIndex.getData(), &timeStamp );
 			frame.mTimeStamp[ Frame::TimeStamp::TIMESTAMP_BODY_INDEX ] = timeStamp;
 		}
 		if ( frameDescription != nullptr ) {

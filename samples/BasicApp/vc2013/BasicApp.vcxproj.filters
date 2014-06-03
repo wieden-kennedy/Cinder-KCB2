@@ -16,11 +16,11 @@
     <Filter Include="Blocks\Cinder-KCB2">
       <UniqueIdentifier>{2e3369f9-9004-4227-9e50-a9d3f926f81f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Blocks\Cinder-KCB2\inc">
-      <UniqueIdentifier>{17da38e9-e3cc-40e8-8684-f10af4130215}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Blocks\Cinder-KCB2\src">
       <UniqueIdentifier>{e7fe1471-3e52-4c2e-bf5c-561197c4b59d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Blocks\Cinder-KCB2\lib">
+      <UniqueIdentifier>{17da38e9-e3cc-40e8-8684-f10af4130215}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -42,11 +42,11 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\inc\KCBv2Lib.h">
-      <Filter>Blocks\Cinder-KCB2\inc</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\Kinect2.h">
       <Filter>Blocks\Cinder-KCB2\src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\lib\KCBv2Lib.h">
+      <Filter>Blocks\Cinder-KCB2\lib</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
