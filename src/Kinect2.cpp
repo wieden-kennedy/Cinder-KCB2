@@ -400,6 +400,52 @@ TrackingState Body::Joint::getTrackingState() const
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
+Audio::Audio()
+	: mBeamAngle(0.0f), mBeamAngleConfidence(0.0f), mBuffer(nullptr), 
+	mBufferSize( 0 ), mBytesRead( 0 )
+{
+}
+
+Audio::~Audio()
+{
+	if (mBuffer != nullptr) {
+		delete[] mBuffer;
+		mBuffer = nullptr;
+	}
+}
+
+float Audio::getBeamAngle() const
+{
+	return mBeamAngle;
+}
+
+float Audio::getBeamAngleConfidence() const
+{
+	return mBeamAngleConfidence;
+}
+
+uint8_t* Audio::getBuffer() const
+{
+	return mBuffer;
+}
+
+unsigned long Audio::getBufferSize() const
+{
+	return mBufferSize;
+}
+
+unsigned long Audio::getBytesRead() const
+{
+	return mBytesRead;
+}
+
+WAVEFORMATEX Audio::getFormat() const
+{
+	return mFormat;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
 Body::Body()
 : mId( 0 ), mIndex( 0 ), mTracked( false )
 {
@@ -820,11 +866,16 @@ void Device::update()
 	};
 
 	if ( mDeviceOptions.isAudioEnabled() ) {
-		IAudioBeamFrame* audioFrame = nullptr;
-		if ( audioFrame != nullptr ) {
-			// TODO audio
-			audioFrame->Release();
-			audioFrame = nullptr;
+		KCBAudioFrame audioFrame;
+		long hr = KCBGetAudioFrame( mKinect, &audioFrame );
+		if ( SUCCEEDED( hr ) ) {
+			frame.mAudio = AudioRef( new Audio() );
+			frame.mAudio->mBeamAngle = audioFrame.fBeamAngle;
+			frame.mAudio->mBeamAngleConfidence = audioFrame.fBeamAngleConfidence;
+			frame.mAudio->mBufferSize = audioFrame.cAudioBufferSize;
+			frame.mAudio->mBytesRead = audioFrame.ulBytesRead;
+			memcpy(frame.mAudio->mBuffer, audioFrame.pAudioBuffer, audioFrame.cAudioBufferSize);
+			KCBGetAudioFormat(mKinect, &frame.mAudio->mFormat);
 		}
 	}
 

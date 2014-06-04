@@ -114,6 +114,32 @@ protected:
 
 class Device;
 
+typedef std::shared_ptr<class Audio> AudioRef;
+
+class Audio
+{
+public:
+	~Audio();
+
+	float			getBeamAngle() const;
+	float			getBeamAngleConfidence() const;
+	uint8_t*		getBuffer() const;
+	unsigned long	getBufferSize() const;
+	unsigned long	getBytesRead() const;
+	WAVEFORMATEX	getFormat() const;
+protected:
+	Audio();
+
+	float			mBeamAngle;
+	float			mBeamAngleConfidence;
+	uint8_t*		mBuffer;
+	unsigned long	mBufferSize;
+	unsigned long	mBytesRead;
+	WAVEFORMATEX	mFormat;
+
+	friend class	Device;
+};
+
 class Body
 {
 public:
@@ -165,6 +191,7 @@ public:
 	enum : size_t
 	{
 		TIMESTAMP_DEFAULT, 
+		TIMESTAMP_AUDIO,
 		TIMESTAMP_BODY, 
 		TIMESTAMP_BODY_INDEX, 
 		TIMESTAMP_COLOR, 
@@ -178,6 +205,7 @@ public:
 	static ci::Vec2i							getColorSize();
 	static ci::Vec2i							getDepthSize();
 
+	const AudioRef&								getAudio() const;
 	const std::vector<Body>&					getBodies() const;
 	const ci::Channel8u&						getBodyIndex() const;
 	const ci::Surface8u&						getColor() const;
@@ -194,6 +222,7 @@ public:
 	uint16_t									getMinReliableDepthDistance() const;
 	long long									getTimeStamp( TimeStamp timeStamp = TimeStamp::TIMESTAMP_DEFAULT ) const;
 protected:
+	AudioRef									mAudio;
 	std::vector<Body>							mBodies;
 	ci::Channel8u								mChannelBodyIndex;
 	ci::Channel16u								mChannelDepth;
