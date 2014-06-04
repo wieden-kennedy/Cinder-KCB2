@@ -5,22 +5,22 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
     <Filter Include="Resource Files">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
     </Filter>
     <Filter Include="Blocks">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+      <UniqueIdentifier>{f1670047-f98a-41ce-a783-f1006d24d3a2}</UniqueIdentifier>
     </Filter>
     <Filter Include="Blocks\Cinder-KCB2">
-      <UniqueIdentifier>{2e3369f9-9004-4227-9e50-a9d3f926f81f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Blocks\Cinder-KCB2\src">
-      <UniqueIdentifier>{e7fe1471-3e52-4c2e-bf5c-561197c4b59d}</UniqueIdentifier>
+      <UniqueIdentifier>{6b73d3f9-143b-4733-9131-05b58ac57ba8}</UniqueIdentifier>
     </Filter>
     <Filter Include="Blocks\Cinder-KCB2\lib">
-      <UniqueIdentifier>{17da38e9-e3cc-40e8-8684-f10af4130215}</UniqueIdentifier>
+      <UniqueIdentifier>{609904b1-9ec9-46a1-bfed-9343f7316352}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -28,25 +28,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Kinect2.cpp">
-      <Filter>Blocks\Cinder-KCB2\src</Filter>
+      <Filter>Blocks\Cinder-KCB2</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\resources\cinder_app_icon.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="Resources.rc">
-      <Filter>Resource Files</Filter>
-    </ResourceCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\..\..\src\Kinect2.h">
-      <Filter>Blocks\Cinder-KCB2\src</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\lib\KCBv2Lib.h">
       <Filter>Blocks\Cinder-KCB2\lib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\Kinect2.h">
+      <Filter>Blocks\Cinder-KCB2</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
