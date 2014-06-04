@@ -58,8 +58,6 @@ private:
 	ci::params::InterfaceGlRef	mParams;
 };
 
-#include "cinder/Font.h"
-
 using namespace ci;
 using namespace ci::app;
 using namespace std;
@@ -93,7 +91,7 @@ void BasicApp::draw()
 
 void BasicApp::prepareSettings( Settings* settings )
 {
-	settings->prepareWindow( Window::Format().size( 1280, 720 ).title( "Basic App" ) );
+	settings->prepareWindow( Window::Format().size( 800, 600 ).title( "Basic App" ) );
 	settings->setFrameRate( 60.0f );
 }
 

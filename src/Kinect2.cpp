@@ -527,9 +527,8 @@ bool Body::isTracked() const
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 Frame::Frame()
-: mDepthMaxReliableDistance( 0 ), mDepthMinReliableDistance( 0 ), mFovDiagonalColor( 0.0f ), 
-mFovHorizontalColor( 0.0f ), mFovVerticalColor( 0.0f ), mFovDiagonalDepth( 0.0f ), 
-mFovHorizontalDepth( 0.0f ), mFovVerticalDepth( 0.0f )
+: mFovDiagonalColor( 0.0f ), mFovHorizontalColor( 0.0f ), mFovVerticalColor( 0.0f ), 
+mFovDiagonalDepth( 0.0f ), mFovHorizontalDepth( 0.0f ), mFovVerticalDepth( 0.0f )
 {
 	for ( size_t i = 0; i < 6; ++i ) {
 		mTimeStamp[ (TimeStamp)i ] = 0L;
@@ -604,16 +603,6 @@ const Channel16u& Frame::getInfrared() const
 const Channel16u& Frame::getInfraredLongExposure() const
 {
 	return mChannelInfraredLongExposure;
-}
-
-uint16_t Frame::getMaxReliableDepthDistance() const
-{
-	return mDepthMinReliableDistance;
-}
-
-uint16_t Frame::getMinReliableDepthDistance() const
-{
-	return mDepthMinReliableDistance;
 }
 
 long long Frame::getTimeStamp( TimeStamp timeStamp ) const
@@ -870,12 +859,12 @@ void Device::update()
 		long hr = KCBGetAudioFrame( mKinect, &audioFrame );
 		if ( SUCCEEDED( hr ) ) {
 			frame.mAudio = AudioRef( new Audio() );
-			frame.mAudio->mBeamAngle = audioFrame.fBeamAngle;
-			frame.mAudio->mBeamAngleConfidence = audioFrame.fBeamAngleConfidence;
-			frame.mAudio->mBufferSize = audioFrame.cAudioBufferSize;
-			frame.mAudio->mBytesRead = audioFrame.ulBytesRead;
-			memcpy(frame.mAudio->mBuffer, audioFrame.pAudioBuffer, audioFrame.cAudioBufferSize);
-			KCBGetAudioFormat(mKinect, &frame.mAudio->mFormat);
+			frame.mAudio->mBeamAngle			= audioFrame.fBeamAngle;
+			frame.mAudio->mBeamAngleConfidence	= audioFrame.fBeamAngleConfidence;
+			frame.mAudio->mBufferSize			= audioFrame.cAudioBufferSize;
+			frame.mAudio->mBytesRead			= audioFrame.ulBytesRead;
+			memcpy( frame.mAudio->mBuffer, audioFrame.pAudioBuffer, audioFrame.cAudioBufferSize );
+			KCBGetAudioFormat( mKinect, &frame.mAudio->mFormat );
 		}
 	}
 
@@ -929,15 +918,23 @@ void Device::update()
 		int64_t timeStamp	= 0L;
 		
 		long hr = KCBGetBodyIndexFrameDescription( mKinect, &frameDescription );
-		sz = processFrame( &frameDescription, false );
 		if ( SUCCEEDED( hr ) ) {
-			KCBBodyIndexFrame bodyIndexFrame;
-			hr = KCBGetBodyIndexFrame( mKinect, &bodyIndexFrame );
-			if ( SUCCEEDED( hr ) ) {
-				timeStamp = bodyIndexFrame.TimeStamp;
-				frame.mTimeStamp[ Frame::TimeStamp::TIMESTAMP_BODY_INDEX ] = timeStamp;
-
-				frame.mChannelBodyIndex = Channel8u( sz.x, sz.y, frameDescription.bytesPerPixel * sz.x, 1, bodyIndexFrame.Buffer );
+			sz = processFrame( &frameDescription, false );
+			IBodyIndexFrame* bodyIndexFrame = nullptr;
+			hr = KCBGetIBodyIndexFrame( mKinect, &bodyIndexFrame );
+			if (SUCCEEDED(hr)) {
+				hr = bodyIndexFrame->get_RelativeTime(&timeStamp);
+				if (SUCCEEDED(hr)) {
+					frame.mTimeStamp[Frame::TimeStamp::TIMESTAMP_BODY_INDEX] = timeStamp;
+					frame.mChannelBodyIndex = Channel8u(sz.x, sz.y);
+					uint32_t capacity = sz.x * sz.y;
+					uint8_t* buffer = frame.mChannelBodyIndex.getData();
+					bodyIndexFrame->CopyFrameDataToArray(capacity, buffer);
+				}
+			}
+			if (bodyIndexFrame != nullptr) {
+				bodyIndexFrame->Release();
+				bodyIndexFrame = nullptr;
 			}
 		}
 		if ( timeStamp > frame.getTimeStamp( Frame::TimeStamp::TIMESTAMP_DEFAULT ) ) {
@@ -951,16 +948,23 @@ void Device::update()
 		int64_t timeStamp	= 0L;
 		
 		long hr = KCBGetColorFrameDescription( mKinect, ColorImageFormat_Bgra, &frameDescription );
-		sz = processFrame( &frameDescription, true );
 		if ( SUCCEEDED( hr ) ) {
-			KCBColorFrame colorFrame;
-			hr = KCBGetColorFrame( mKinect, &colorFrame );
-			if ( SUCCEEDED( hr ) ) {
-				timeStamp = colorFrame.TimeStamp;
-				frame.mTimeStamp[ Frame::TimeStamp::TIMESTAMP_COLOR ] = timeStamp;
-
-				frame.mSurfaceColor = Surface8u( colorFrame.Buffer, sz.x, sz.y, 
-					frameDescription.bytesPerPixel * sz.x, SurfaceChannelOrder::BGRA );
+			sz = processFrame( &frameDescription, true );
+			IColorFrame* colorFrame = nullptr;
+			hr = KCBGetIColorFrame( mKinect, &colorFrame );
+			if (SUCCEEDED(hr)) {
+				hr = colorFrame->get_RelativeTime(&timeStamp);
+				if (SUCCEEDED(hr)) {
+					frame.mTimeStamp[Frame::TimeStamp::TIMESTAMP_COLOR] = timeStamp;
+					frame.mSurfaceColor = Surface8u(sz.x, sz.y, false, SurfaceChannelOrder::BGRA);
+					uint32_t capacity = sz.x * sz.y * frameDescription.bytesPerPixel;
+					uint8_t* buffer = frame.mSurfaceColor.getData();
+					colorFrame->CopyConvertedFrameDataToArray( capacity, buffer, ColorImageFormat_Bgra);
+				}
+			}
+			if (colorFrame != nullptr) {
+				colorFrame->Release();
+				colorFrame = nullptr;
 			}
 		}
 		if ( timeStamp > frame.getTimeStamp( Frame::TimeStamp::TIMESTAMP_DEFAULT ) ) {
@@ -974,16 +978,23 @@ void Device::update()
 		int64_t timeStamp	= 0L;
 		
 		long hr = KCBGetDepthFrameDescription( mKinect, &frameDescription );
-		sz = processFrame( &frameDescription, false );
 		if ( SUCCEEDED( hr ) ) {
-			KCBDepthFrame depthFrame;
-			hr = KCBGetDepthFrame( mKinect, &depthFrame );
+			sz = processFrame( &frameDescription, false );
+			IDepthFrame* depthFrame = nullptr;
+			hr = KCBGetIDepthFrame( mKinect, &depthFrame );
 			if ( SUCCEEDED( hr ) ) {
-				timeStamp = depthFrame.TimeStamp;
-				frame.mTimeStamp[ Frame::TimeStamp::TIMESTAMP_DEPTH ] = timeStamp;
-
-				frame.mChannelDepth = Channel16u( sz.x, sz.y, sz.x * frameDescription.bytesPerPixel, 
-					1, depthFrame.Buffer );
+				hr = depthFrame->get_RelativeTime( &timeStamp );
+				if (SUCCEEDED(hr)) {
+					frame.mTimeStamp[Frame::TimeStamp::TIMESTAMP_DEPTH] = timeStamp;
+					frame.mChannelDepth = Channel16u(sz.x, sz.y);
+					uint32_t capacity = sz.x * sz.y;
+					uint16_t* buffer = frame.mChannelDepth.getData();
+					depthFrame->CopyFrameDataToArray(capacity, buffer);
+				}
+			}
+			if (depthFrame != nullptr) {
+				depthFrame->Release();
+				depthFrame = nullptr;
 			}
 		}
 		if ( timeStamp > frame.getTimeStamp( Frame::TimeStamp::TIMESTAMP_DEFAULT ) ) {
@@ -999,14 +1010,21 @@ void Device::update()
 		long hr = KCBGetInfraredFrameDescription( mKinect, &frameDescription );
 		sz = processFrame( &frameDescription, false );
 		if ( SUCCEEDED( hr ) ) {
-			KCBInfraredFrame infraredFrame;
-			hr = KCBGetInfraredFrame( mKinect, &infraredFrame );
-			if ( SUCCEEDED( hr ) ) {
-				timeStamp = infraredFrame.TimeStamp;
-				frame.mTimeStamp[ Frame::TimeStamp::TIMESTAMP_INFRARED ] = timeStamp;
-
-				frame.mChannelInfrared = Channel16u( sz.x, sz.y, frameDescription.bytesPerPixel * sz.x, 
-					1, infraredFrame.Buffer );
+			IInfraredFrame* infraredFrame = nullptr;
+			hr = KCBGetIInfraredFrame( mKinect, &infraredFrame );
+			if (SUCCEEDED(hr)) {
+				hr = infraredFrame->get_RelativeTime(&timeStamp);
+				if (SUCCEEDED(hr)) {
+					frame.mTimeStamp[Frame::TimeStamp::TIMESTAMP_INFRARED] = timeStamp;
+					frame.mChannelInfrared = Channel16u(sz.x, sz.y);
+					uint32_t capacity = sz.x * sz.y;
+					uint16_t* buffer = frame.mChannelInfrared.getData();
+					infraredFrame->CopyFrameDataToArray(capacity, buffer);
+				}
+			}
+			if (infraredFrame != nullptr) {
+				infraredFrame->Release();
+				infraredFrame = nullptr;
 			}
 		}
 		if ( timeStamp > frame.getTimeStamp( Frame::TimeStamp::TIMESTAMP_DEFAULT ) ) {
@@ -1022,14 +1040,21 @@ void Device::update()
 		long hr = KCBGetLongExposureInfraredFrameDescription( mKinect, &frameDescription );
 		sz = processFrame( &frameDescription, false );
 		if ( SUCCEEDED( hr ) ) {
-			KCBLongExposureInfraredFrame longExposureInfraredFrame;
-			hr = KCBGetLongExposureInfraredFrame( mKinect, &longExposureInfraredFrame );
-			if ( SUCCEEDED( hr ) ) {
-				timeStamp = longExposureInfraredFrame.TimeStamp;
-				frame.mTimeStamp[ Frame::TimeStamp::TIMESTAMP_INFRARED_LONG_EXPOSURE ] = timeStamp;
-
-				frame.mChannelInfraredLongExposure = Channel16u( sz.x, sz.y, sz.x * frameDescription.bytesPerPixel, 
-					1, longExposureInfraredFrame.Buffer );
+			ILongExposureInfraredFrame* infraredFrame = nullptr;
+			hr = KCBGetILongExposureInfraredFrame(mKinect, &infraredFrame);
+			if (SUCCEEDED(hr)) {
+				hr = infraredFrame->get_RelativeTime(&timeStamp);
+				if (SUCCEEDED(hr)) {
+					frame.mTimeStamp[Frame::TimeStamp::TIMESTAMP_INFRARED_LONG_EXPOSURE] = timeStamp;
+					frame.mChannelInfraredLongExposure = Channel16u(sz.x, sz.y);
+					uint32_t capacity = sz.x * sz.y;
+					uint16_t* buffer = frame.mChannelInfraredLongExposure.getData();
+					infraredFrame->CopyFrameDataToArray(capacity, buffer);
+				}
+			}
+			if (infraredFrame != nullptr) {
+				infraredFrame->Release();
+				infraredFrame = nullptr;
 			}
 		}
 		if ( timeStamp > frame.getTimeStamp( Frame::TimeStamp::TIMESTAMP_DEFAULT ) ) {
@@ -1038,8 +1063,6 @@ void Device::update()
 	}
 
 	if ( frame.getTimeStamp( Frame::TimeStamp::TIMESTAMP_DEFAULT ) > mFrame.getTimeStamp( Frame::TimeStamp::TIMESTAMP_DEFAULT ) ) {
-		mFrame.mDepthMaxReliableDistance							= frame.mDepthMaxReliableDistance;
-		mFrame.mDepthMinReliableDistance							= frame.mDepthMinReliableDistance;
 		mFrame.mFovDiagonalColor									= frame.mFovDiagonalColor;
 		mFrame.mFovHorizontalColor									= frame.mFovHorizontalColor;
 		mFrame.mFovVerticalColor									= frame.mFovVerticalColor;

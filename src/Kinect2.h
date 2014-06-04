@@ -190,8 +190,7 @@ class Frame
 public:
 	enum : size_t
 	{
-		TIMESTAMP_DEFAULT, 
-		TIMESTAMP_AUDIO,
+		TIMESTAMP_DEFAULT,
 		TIMESTAMP_BODY, 
 		TIMESTAMP_BODY_INDEX, 
 		TIMESTAMP_COLOR, 
@@ -218,8 +217,6 @@ public:
 	float										getDepthFovVertical() const;
 	const ci::Channel16u&						getInfrared() const;
 	const ci::Channel16u&						getInfraredLongExposure() const;
-	uint16_t									getMaxReliableDepthDistance() const;
-	uint16_t									getMinReliableDepthDistance() const;
 	long long									getTimeStamp( TimeStamp timeStamp = TimeStamp::TIMESTAMP_DEFAULT ) const;
 protected:
 	AudioRef									mAudio;
@@ -228,8 +225,6 @@ protected:
 	ci::Channel16u								mChannelDepth;
 	ci::Channel16u								mChannelInfrared;
 	ci::Channel16u								mChannelInfraredLongExposure;
-	uint16_t									mDepthMaxReliableDistance;
-	uint16_t									mDepthMinReliableDistance;
 	float										mFovDiagonalColor;
 	float										mFovHorizontalColor;
 	float										mFovVerticalColor;

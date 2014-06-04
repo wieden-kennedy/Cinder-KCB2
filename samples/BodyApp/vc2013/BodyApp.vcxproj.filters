@@ -14,45 +14,29 @@
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
     </Filter>
     <Filter Include="Blocks">
-      <UniqueIdentifier>{ac5039ca-1ec2-410a-823e-e8fe5f85fbce}</UniqueIdentifier>
+      <UniqueIdentifier>{f1670047-f98a-41ce-a783-f1006d24d3a2}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Blocks\Cinder-KCB">
-      <UniqueIdentifier>{3a17163e-7486-4b3c-9225-ab389885a0a1}</UniqueIdentifier>
+    <Filter Include="Blocks\Cinder-KCB2">
+      <UniqueIdentifier>{6b73d3f9-143b-4733-9131-05b58ac57ba8}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Blocks\Cinder-KCB\src">
-      <UniqueIdentifier>{ee3da296-aafd-41ae-b4ce-7f8a2c2f9171}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Blocks\Cinder-KCB\inc">
-      <UniqueIdentifier>{219aa89d-2b66-45ca-b38f-c15b8c7f0966}</UniqueIdentifier>
+    <Filter Include="Blocks\Cinder-KCB2\lib">
+      <UniqueIdentifier>{609904b1-9ec9-46a1-bfed-9343f7316352}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\Resources.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClCompile Include="..\src\BodyApp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClInclude Include="..\..\..\inc\KCBv2Lib.h">
-      <Filter>Blocks\Cinder-KCB\inc</Filter>
+    <ClCompile Include="..\..\..\src\Kinect2.cpp">
+      <Filter>Blocks\Cinder-KCB2</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\lib\KCBv2Lib.h">
+      <Filter>Blocks\Cinder-KCB2\lib</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\Kinect2.h">
-      <Filter>Blocks\Cinder-KCB\src</Filter>
+      <Filter>Blocks\Cinder-KCB2</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\include\Resources.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="Resources.rc">
-      <Filter>Resource Files</Filter>
-    </ResourceCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="..\..\..\src\Kinect2.cpp">
-      <Filter>Blocks\Cinder-KCB\src</Filter>
-    </ClCompile>
   </ItemGroup>
 </Project>
