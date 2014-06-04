@@ -38,7 +38,7 @@
 #pragma once
 
 #include "KCBv2Lib.h"
- #include "cinder/Exception.h"
+#include "cinder/Exception.h"
 #include "cinder/Quaternion.h"
 #include "cinder/Surface.h"
 #include <functional>
