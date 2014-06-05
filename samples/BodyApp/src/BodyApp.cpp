@@ -70,7 +70,7 @@ void BodyApp::draw()
 	gl::clear( Colorf::black() );
 	gl::disableDepthRead();
 	gl::disableDepthWrite();
-	gl::enableAlphaBlending();
+	gl::disableAlphaBlending();
 	gl::color( ColorAf::white() );
 
 	if ( mFrame.getDepth() ) {
@@ -87,13 +87,17 @@ void BodyApp::draw()
 	gl::pushMatrices();
 	gl::scale( Vec2f( getWindowSize() ) / Vec2f( mFrame.getDepthSize() ) );
 	for ( const Kinect2::Body& body : mFrame.getBodies() ) {
-		for ( const auto& joint : body.getJointMap() ) {
-			Vec2f pos( mDevice->mapCameraToDepth( joint.second.getPosition() ) );
-			gl::drawSolidCircle( pos, 5.0f, 32 );
-			Vec2f parent( mDevice->mapCameraToDepth(
-				body.getJointMap().at( joint.second.getParentJoint() ).getPosition()
-				) );
-			gl::drawLine( pos, parent );
+		if ( body.isTracked() ) {
+			for ( const auto& joint : body.getJointMap() ) {
+				if ( joint.second.getTrackingState() == TrackingState::TrackingState_Tracked ) {
+					Vec2f pos( mDevice->mapCameraToDepth( joint.second.getPosition() ) );
+					gl::drawSolidCircle( pos, 5.0f, 32 );
+					Vec2f parent( mDevice->mapCameraToDepth(
+						body.getJointMap().at( joint.second.getParentJoint() ).getPosition()
+						) );
+					gl::drawLine( pos, parent );
+				}
+			}
 		}
 	}
 	gl::popMatrices();
