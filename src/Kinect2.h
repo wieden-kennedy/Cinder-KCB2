@@ -125,7 +125,6 @@ public:
 	float			getBeamAngleConfidence() const;
 	uint8_t*		getBuffer() const;
 	unsigned long	getBufferSize() const;
-	unsigned long	getBytesRead() const;
 	WAVEFORMATEX	getFormat() const;
 protected:
 	Audio();
@@ -134,7 +133,6 @@ protected:
 	float			mBeamAngleConfidence;
 	uint8_t*		mBuffer;
 	unsigned long	mBufferSize;
-	unsigned long	mBytesRead;
 	WAVEFORMATEX	mFormat;
 
 	friend class	Device;
@@ -269,8 +267,9 @@ protected:
 
 	virtual void								update();
 
-	std::function<void ( Frame frame )>	mEventHandler;
+	std::function<void ( Frame frame )>			mEventHandler;
 	
+	double										mAudioReadTime;
 	DeviceOptions								mDeviceOptions;
 	Frame										mFrame;
 	KCBHANDLE									mKinect;

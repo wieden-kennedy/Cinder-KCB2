@@ -402,7 +402,7 @@ TrackingState Body::Joint::getTrackingState() const
 
 Audio::Audio()
 	: mBeamAngle(0.0f), mBeamAngleConfidence(0.0f), mBuffer(nullptr), 
-	mBufferSize( 0 ), mBytesRead( 0 )
+	mBufferSize( 0 )
 {
 }
 
@@ -432,11 +432,6 @@ uint8_t* Audio::getBuffer() const
 unsigned long Audio::getBufferSize() const
 {
 	return mBufferSize;
-}
-
-unsigned long Audio::getBytesRead() const
-{
-	return mBytesRead;
 }
 
 WAVEFORMATEX Audio::getFormat() const
@@ -535,6 +530,11 @@ mFovDiagonalDepth( 0.0f ), mFovHorizontalDepth( 0.0f ), mFovVerticalDepth( 0.0f 
 	}
 }
 
+const AudioRef& Frame::getAudio() const
+{
+	return mAudio;
+}
+
 Vec2i Frame::getColorSize()
 {
 	return Vec2i( 1920, 1080 ); 
@@ -621,7 +621,7 @@ DeviceRef Device::create()
 }
 
 Device::Device()
-: mKinect( KCB_INVALID_HANDLE )//, mStatus( KinectStatus::KinectStatus_Undefined )
+	: mAudioReadTime( 0.0 ), mKinect(KCB_INVALID_HANDLE)//, mStatus( KinectStatus::KinectStatus_Undefined )
 {
 	App::get()->getSignalUpdate().connect( bind( &Device::update, this ) );
 }
@@ -854,21 +854,33 @@ void Device::update()
 		return sz;
 	};
 
-	if ( mDeviceOptions.isAudioEnabled() ) {
-		KCBAudioFrame audioFrame;
-		long hr = KCBGetAudioFrame( mKinect, &audioFrame );
+	AudioRef audio;
+	double e = app::getElapsedSeconds();
+	if ( mDeviceOptions.isAudioEnabled() && e - mAudioReadTime > 50.0 ) { //KCBIsFrameReady( mKinect, FrameSourceTypes_Audio ) ) {
+		WAVEFORMATEX format;
+		long hr = KCBGetAudioFormat( mKinect, &format );
 		if ( SUCCEEDED( hr ) ) {
-			frame.mAudio = AudioRef( new Audio() );
-			frame.mAudio->mBeamAngle			= audioFrame.fBeamAngle;
-			frame.mAudio->mBeamAngleConfidence	= audioFrame.fBeamAngleConfidence;
-			frame.mAudio->mBufferSize			= audioFrame.cAudioBufferSize;
-			frame.mAudio->mBytesRead			= audioFrame.ulBytesRead;
-			memcpy( frame.mAudio->mBuffer, audioFrame.pAudioBuffer, audioFrame.cAudioBufferSize );
-			KCBGetAudioFormat( mKinect, &frame.mAudio->mFormat );
+			KCBAudioFrame* audioFrame		= new KCBAudioFrame();
+			audioFrame->cAudioBufferSize	= 4;
+			audioFrame->pAudioBuffer		= new uint8_t[ audioFrame->cAudioBufferSize * format.nBlockAlign ];
+			hr = KCBGetAudioFrame( mKinect, audioFrame );
+			if ( SUCCEEDED( hr ) ) {
+				audio = AudioRef( new Audio() );
+				audio->mBeamAngle			= audioFrame->fBeamAngle;
+				audio->mBeamAngleConfidence	= audioFrame->fBeamAngleConfidence;
+				audio->mBufferSize			= audioFrame->ulBytesRead;
+				if ( audioFrame->ulBytesRead > 0 ) {
+					//audio->mBuffer				= new uint8_t[ audio->mBufferSize ];
+					//memcpy( frame.mAudio->mBuffer, audioFrame->pAudioBuffer, audio->mBufferSize );
+				}
+			}
+			delete [] audioFrame->pAudioBuffer;
+			delete audioFrame;
 		}
+		mAudioReadTime = e;
 	}
 
-	if ( mDeviceOptions.isBodyEnabled() ) {
+	if (mDeviceOptions.isBodyEnabled() && KCBIsFrameReady(mKinect, FrameSourceTypes_Body)) {
 		int64_t timeStamp					= 0L;
 		IBody* kinectBodies[ BODY_COUNT ]	= { 0 };
 		
@@ -912,7 +924,7 @@ void Device::update()
 		}
 	}
 
-	if ( mDeviceOptions.isBodyIndexEnabled() ) {
+	if (mDeviceOptions.isBodyIndexEnabled() && KCBIsFrameReady(mKinect, FrameSourceTypes_BodyIndex)) {
 		KCBFrameDescription frameDescription;
 		Vec2i sz			= Vec2i::zero();
 		int64_t timeStamp	= 0L;
@@ -942,7 +954,7 @@ void Device::update()
 		}
 	}
 
-	if ( mDeviceOptions.isColorEnabled() ) {
+	if (mDeviceOptions.isColorEnabled() && KCBIsFrameReady(mKinect, FrameSourceTypes_Color)) {
 		KCBFrameDescription frameDescription;
 		Vec2i sz			= Vec2i::zero();
 		int64_t timeStamp	= 0L;
@@ -972,7 +984,7 @@ void Device::update()
 		}
 	}
 
-	if ( mDeviceOptions.isDepthEnabled() ) {
+	if (mDeviceOptions.isDepthEnabled() && KCBIsFrameReady(mKinect, FrameSourceTypes_Depth)) {
 		KCBFrameDescription frameDescription;
 		Vec2i sz			= Vec2i::zero();
 		int64_t timeStamp	= 0L;
@@ -1001,8 +1013,8 @@ void Device::update()
 			frame.mTimeStamp[ Frame::TimeStamp::TIMESTAMP_DEFAULT ] = timeStamp;
 		}
 	}
-
-	if ( mDeviceOptions.isInfraredEnabled() ) {
+	
+	if (mDeviceOptions.isInfraredEnabled() && KCBIsFrameReady(mKinect, FrameSourceTypes_Infrared )) {
 		KCBFrameDescription frameDescription;
 		Vec2i sz			= Vec2i::zero();
 		int64_t timeStamp	= 0L;
@@ -1032,7 +1044,7 @@ void Device::update()
 		}
 	}
 
-	if ( mDeviceOptions.isInfraredLongExposureEnabled() ) {
+	if (mDeviceOptions.isInfraredLongExposureEnabled() && KCBIsFrameReady(mKinect, FrameSourceTypes_LongExposureInfrared)) {
 		KCBFrameDescription frameDescription;
 		Vec2i sz			= Vec2i::zero();
 		int64_t timeStamp	= 0L;
@@ -1063,6 +1075,7 @@ void Device::update()
 	}
 
 	if ( frame.getTimeStamp( Frame::TimeStamp::TIMESTAMP_DEFAULT ) > mFrame.getTimeStamp( Frame::TimeStamp::TIMESTAMP_DEFAULT ) ) {
+		mFrame.mAudio												= audio;
 		mFrame.mFovDiagonalColor									= frame.mFovDiagonalColor;
 		mFrame.mFovHorizontalColor									= frame.mFovHorizontalColor;
 		mFrame.mFovVerticalColor									= frame.mFovVerticalColor;

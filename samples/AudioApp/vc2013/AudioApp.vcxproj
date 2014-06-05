@@ -20,7 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\Kinect2.cpp" />
-    <ClCompile Include="..\src\BasicApp.cpp" />
+    <ClCompile Include="..\src\AudioApp.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\lib\KCBv2Lib.h" />
@@ -28,9 +28,9 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{74202EDD-91D2-4D2A-B0B6-355CEB16E6BE}</ProjectGuid>
-    <RootNamespace>BasicApp</RootNamespace>
+    <RootNamespace>AudioApp</RootNamespace>
     <Keyword>Win32Proj</Keyword>
-    <ProjectName>BasicApp</ProjectName>
+    <ProjectName>AudioApp</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
