@@ -68,6 +68,8 @@ void BodyApp::draw()
 {
 	gl::setViewport( getWindowBounds() );
 	gl::clear( Colorf::black() );
+	gl::disableDepthRead();
+	gl::disableDepthWrite();
 	gl::enableAlphaBlending();
 	gl::color( ColorAf::white() );
 
@@ -81,20 +83,21 @@ void BodyApp::draw()
 		gl::draw( tex, tex->getBounds(), Rectf( getWindowBounds() ) );
 	}
 
-	if ( mFrame.getDepth() && mDevice ) {
-		gl::pushMatrices();
-		gl::scale( Vec2f( getWindowSize() ) / Vec2f( mFrame.getDepth().getSize() ) );
-		for ( const Kinect2::Body& body : mDevice->getFrame().getBodies() ) {
-			for ( const auto& joint : body.getJointMap() ) {
-				Vec2i pos = mDevice->mapCameraToDepth( joint.second.getPosition() );
-				gl::color( ColorAf::white() );
-				gl::drawSolidCircle( pos, 7.0f, 32 );
-				gl::color( Kinect2::getBodyColor( body.getIndex() ) );
-				gl::drawSolidCircle( pos, 5.0f, 32 );
-			}
+	gl::color(ColorAf::white());
+	gl::pushMatrices();
+	gl::scale( Vec2f( getWindowSize() ) / Vec2f( mFrame.getDepthSize() ) );
+	for ( const Kinect2::Body& body : mFrame.getBodies() ) {
+		for ( const auto& joint : body.getJointMap() ) {
+			Vec2f pos( mDevice->mapCameraToDepth( joint.second.getPosition() ) );
+			gl::drawSolidCircle( pos, 5.0f, 32 );
+			Vec2f parent( mDevice->mapCameraToDepth(
+				body.getJointMap().at( joint.second.getParentJoint() ).getPosition()
+				) );
+			gl::drawLine( pos, parent );
 		}
-		gl::popMatrices();
 	}
+	gl::popMatrices();
+
 	mParams->draw();
 }
 

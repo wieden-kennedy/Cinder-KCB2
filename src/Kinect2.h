@@ -152,12 +152,15 @@ public:
 		
 		uint64_t								getId() const;
 		const ci::Quatf&						getOrientation() const;
+		JointType								getParentJoint() const;
 		const ci::Vec3f&						getPosition() const;
 		TrackingState							getTrackingState() const;
 	protected:
-		Joint( const ci::Vec3f& position, const ci::Quatf& orientation, TrackingState trackingState );
+		Joint( const ci::Vec3f& position, const ci::Quatf& orientation, 
+			TrackingState trackingState, JointType parentJoint );
 		
 		ci::Quatf								mOrientation;
+		JointType								mParentJoint;
 		ci::Vec3f								mPosition;
 		TrackingState							mTrackingState;
 

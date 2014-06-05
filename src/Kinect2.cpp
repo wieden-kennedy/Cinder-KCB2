@@ -374,13 +374,20 @@ bool DeviceOptions::isInfraredLongExposureEnabled() const
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 Body::Joint::Joint()
-: mOrientation( Quatf() ), mPosition( Vec3f::zero() ), mTrackingState( TrackingState::TrackingState_NotTracked )
+: mOrientation( Quatf() ), mParentJoint( JointType::JointType_Count ), mPosition( Vec3f::zero() ), 
+mTrackingState( TrackingState::TrackingState_NotTracked )
 {
 }
 
-Body::Joint::Joint( const Vec3f& position, const Quatf& orientation, TrackingState trackingState )
-: mOrientation( orientation ), mPosition( position ), mTrackingState( trackingState )
+Body::Joint::Joint( const Vec3f& position, const Quatf& orientation, TrackingState trackingState,
+	JointType parentJoint )
+: mOrientation( orientation ), mParentJoint( parentJoint ), mTrackingState( trackingState )
 {
+}
+
+JointType Body::Joint::getParentJoint() const
+{
+	return mParentJoint;
 }
 
 const Vec3f& Body::Joint::getPosition() const
@@ -401,15 +408,15 @@ TrackingState Body::Joint::getTrackingState() const
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 Audio::Audio()
-	: mBeamAngle(0.0f), mBeamAngleConfidence(0.0f), mBuffer(nullptr), 
+	: mBeamAngle( 0.0f ), mBeamAngleConfidence( 0.0f ), mBuffer( nullptr ), 
 	mBufferSize( 0 )
 {
 }
 
 Audio::~Audio()
 {
-	if (mBuffer != nullptr) {
-		delete[] mBuffer;
+	if ( mBuffer != nullptr ) {
+		delete [] mBuffer;
 		mBuffer = nullptr;
 	}
 }
@@ -827,9 +834,7 @@ void Device::update()
 	
 	std::function<Vec2i( KCBFrameDescription*, bool )> processFrame = [ &frame ]( KCBFrameDescription* frameDescription, bool colorFrame )
 	{
-		Vec2i sz = Vec2i::zero();
-		sz.x = frameDescription->width;
-		sz.y = frameDescription->height;
+		Vec2i sz( frameDescription->width, frameDescription->height );
 		if ( colorFrame ) {
 			if ( frame.mFovDiagonalColor <= 0.0f ) {
 				frame.mFovDiagonalColor = frameDescription->diagonalFieldOfView;
@@ -856,7 +861,7 @@ void Device::update()
 
 	AudioRef audio;
 	double e = app::getElapsedSeconds();
-	if ( mDeviceOptions.isAudioEnabled() && e - mAudioReadTime > 50.0 ) { //KCBIsFrameReady( mKinect, FrameSourceTypes_Audio ) ) {
+	if ( mDeviceOptions.isAudioEnabled() && KCBIsFrameReady( mKinect, FrameSourceTypes_Audio ) ) {
 		WAVEFORMATEX format;
 		long hr = KCBGetAudioFormat( mKinect, &format );
 		if ( SUCCEEDED( hr ) ) {
@@ -880,7 +885,7 @@ void Device::update()
 		mAudioReadTime = e;
 	}
 
-	if (mDeviceOptions.isBodyEnabled() && KCBIsFrameReady(mKinect, FrameSourceTypes_Body)) {
+	if ( mDeviceOptions.isBodyEnabled() && KCBIsFrameReady(mKinect, FrameSourceTypes_Body ) ) {
 		int64_t timeStamp					= 0L;
 		IBody* kinectBodies[ BODY_COUNT ]	= { 0 };
 		
@@ -903,10 +908,90 @@ void Device::update()
 
 						map<JointType, Body::Joint> jointMap;
 						for ( int32_t j = 0; j < JointType_Count; ++j ) {
+							JointType parentJoint = (JointType)j;
+							switch ( (JointType)j ) {
+							case JointType::JointType_AnkleLeft:
+								parentJoint = JointType_KneeLeft;
+								break;
+							case JointType::JointType_AnkleRight:
+								parentJoint = JointType_KneeRight;
+								break;
+							case JointType::JointType_ElbowLeft:
+								parentJoint = JointType_ShoulderLeft;
+								break;
+							case JointType::JointType_ElbowRight:
+								parentJoint = JointType_ShoulderRight;
+								break;
+							case JointType::JointType_FootLeft:
+								parentJoint = JointType_AnkleLeft;
+								break;
+							case JointType::JointType_FootRight:
+								parentJoint = JointType_AnkleRight;
+								break;
+							case JointType::JointType_HandLeft:
+								parentJoint = JointType_WristLeft;
+								break;
+							case JointType::JointType_HandRight:
+								parentJoint = JointType_WristRight;
+								break;
+							case JointType::JointType_HandTipLeft:
+								parentJoint = JointType_HandLeft;
+								break;
+							case JointType::JointType_HandTipRight:
+								parentJoint = JointType_HandRight;
+								break;
+							case JointType::JointType_Head:
+								parentJoint = JointType_Neck;
+								break;
+							case JointType::JointType_HipLeft:
+								parentJoint = JointType_SpineBase;
+								break;
+							case JointType::JointType_HipRight:
+								parentJoint = JointType_SpineBase;
+								break;
+							case JointType::JointType_KneeLeft:
+								parentJoint = JointType_HipLeft;
+								break;
+							case JointType::JointType_KneeRight:
+								parentJoint = JointType_HipRight;
+								break;
+							case JointType::JointType_Neck:
+								parentJoint = JointType_SpineShoulder;
+								break;
+							case JointType::JointType_ShoulderLeft:
+								parentJoint = JointType_SpineShoulder;
+								break;
+							case JointType::JointType_ShoulderRight:
+								parentJoint = JointType_SpineShoulder;
+								break;
+							case JointType::JointType_SpineBase:
+								parentJoint = JointType_SpineBase;
+								break;
+							case JointType::JointType_SpineMid:
+								parentJoint = JointType_SpineBase;
+								break;
+							case JointType::JointType_SpineShoulder:
+								parentJoint = JointType_SpineMid;
+								break;
+							case JointType::JointType_ThumbLeft:
+								parentJoint = JointType_HandLeft;
+								break;
+							case JointType::JointType_ThumbRight:
+								parentJoint = JointType_HandRight;
+								break;
+							case JointType::JointType_WristLeft:
+								parentJoint = JointType_ElbowLeft;
+								break;
+							case JointType::JointType_WristRight:
+								parentJoint = JointType_ElbowRight;
+								break;
+							}
+
 							Body::Joint joint( 
 								toVec3f( joints[ j ].Position ), 
 								toQuatf( jointOrientations[ j ].Orientation ), 
-								joints[ j ].TrackingState
+								joints[ j ].TrackingState, 
+								parentJoint
 								);
 							jointMap.insert( pair<JointType, Body::Joint>( static_cast<JointType>( j ), joint ) );
 						}
@@ -924,27 +1009,29 @@ void Device::update()
 		}
 	}
 
-	if (mDeviceOptions.isBodyIndexEnabled() && KCBIsFrameReady(mKinect, FrameSourceTypes_BodyIndex)) {
+	if (mDeviceOptions.isBodyIndexEnabled() && KCBIsFrameReady( mKinect, FrameSourceTypes_BodyIndex ) ) {
 		KCBFrameDescription frameDescription;
 		Vec2i sz			= Vec2i::zero();
 		int64_t timeStamp	= 0L;
 		
 		long hr = KCBGetBodyIndexFrameDescription( mKinect, &frameDescription );
 		if ( SUCCEEDED( hr ) ) {
-			sz = processFrame( &frameDescription, false );
 			IBodyIndexFrame* bodyIndexFrame = nullptr;
+			
+			sz = processFrame( &frameDescription, false );
 			hr = KCBGetIBodyIndexFrame( mKinect, &bodyIndexFrame );
-			if (SUCCEEDED(hr)) {
-				hr = bodyIndexFrame->get_RelativeTime(&timeStamp);
-				if (SUCCEEDED(hr)) {
-					frame.mTimeStamp[Frame::TimeStamp::TIMESTAMP_BODY_INDEX] = timeStamp;
-					frame.mChannelBodyIndex = Channel8u(sz.x, sz.y);
-					uint32_t capacity = sz.x * sz.y;
-					uint8_t* buffer = frame.mChannelBodyIndex.getData();
-					bodyIndexFrame->CopyFrameDataToArray(capacity, buffer);
+			if ( SUCCEEDED( hr ) ) {
+				hr = bodyIndexFrame->get_RelativeTime( &timeStamp );
+				if ( SUCCEEDED( hr ) ) {
+					frame.mTimeStamp[ Frame::TimeStamp::TIMESTAMP_BODY_INDEX ] = timeStamp;
+
+					frame.mChannelBodyIndex = Channel8u( sz.x, sz.y );
+					uint32_t capacity		= sz.x * sz.y;
+					uint8_t* buffer			= frame.mChannelBodyIndex.getData();
+					bodyIndexFrame->CopyFrameDataToArray( capacity, buffer );
 				}
 			}
-			if (bodyIndexFrame != nullptr) {
+			if ( bodyIndexFrame != nullptr ) {
 				bodyIndexFrame->Release();
 				bodyIndexFrame = nullptr;
 			}
@@ -954,24 +1041,26 @@ void Device::update()
 		}
 	}
 
-	if (mDeviceOptions.isColorEnabled() && KCBIsFrameReady(mKinect, FrameSourceTypes_Color)) {
+	if (mDeviceOptions.isColorEnabled() && KCBIsFrameReady( mKinect, FrameSourceTypes_Color ) ) {
 		KCBFrameDescription frameDescription;
 		Vec2i sz			= Vec2i::zero();
 		int64_t timeStamp	= 0L;
 		
 		long hr = KCBGetColorFrameDescription( mKinect, ColorImageFormat_Bgra, &frameDescription );
 		if ( SUCCEEDED( hr ) ) {
-			sz = processFrame( &frameDescription, true );
 			IColorFrame* colorFrame = nullptr;
+			
+			sz = processFrame( &frameDescription, true );
 			hr = KCBGetIColorFrame( mKinect, &colorFrame );
-			if (SUCCEEDED(hr)) {
-				hr = colorFrame->get_RelativeTime(&timeStamp);
-				if (SUCCEEDED(hr)) {
-					frame.mTimeStamp[Frame::TimeStamp::TIMESTAMP_COLOR] = timeStamp;
-					frame.mSurfaceColor = Surface8u(sz.x, sz.y, false, SurfaceChannelOrder::BGRA);
-					uint32_t capacity = sz.x * sz.y * frameDescription.bytesPerPixel;
-					uint8_t* buffer = frame.mSurfaceColor.getData();
-					colorFrame->CopyConvertedFrameDataToArray( capacity, buffer, ColorImageFormat_Bgra);
+			if ( SUCCEEDED( hr ) ) {
+				hr = colorFrame->get_RelativeTime( &timeStamp );
+				if ( SUCCEEDED( hr ) ) {
+					frame.mTimeStamp[ Frame::TimeStamp::TIMESTAMP_COLOR ] = timeStamp;
+
+					frame.mSurfaceColor	= Surface8u( sz.x, sz.y, false, SurfaceChannelOrder::BGRA );
+					uint32_t capacity	= sz.x * sz.y * frameDescription.bytesPerPixel;
+					uint8_t* buffer		= frame.mSurfaceColor.getData();
+					colorFrame->CopyConvertedFrameDataToArray( capacity, buffer, ColorImageFormat_Bgra );
 				}
 			}
 			if (colorFrame != nullptr) {
@@ -984,27 +1073,29 @@ void Device::update()
 		}
 	}
 
-	if (mDeviceOptions.isDepthEnabled() && KCBIsFrameReady(mKinect, FrameSourceTypes_Depth)) {
+	if ( mDeviceOptions.isDepthEnabled() && KCBIsFrameReady( mKinect, FrameSourceTypes_Depth ) ) {
 		KCBFrameDescription frameDescription;
 		Vec2i sz			= Vec2i::zero();
 		int64_t timeStamp	= 0L;
 		
 		long hr = KCBGetDepthFrameDescription( mKinect, &frameDescription );
 		if ( SUCCEEDED( hr ) ) {
-			sz = processFrame( &frameDescription, false );
 			IDepthFrame* depthFrame = nullptr;
+
+			sz = processFrame( &frameDescription, false );
 			hr = KCBGetIDepthFrame( mKinect, &depthFrame );
 			if ( SUCCEEDED( hr ) ) {
 				hr = depthFrame->get_RelativeTime( &timeStamp );
-				if (SUCCEEDED(hr)) {
-					frame.mTimeStamp[Frame::TimeStamp::TIMESTAMP_DEPTH] = timeStamp;
-					frame.mChannelDepth = Channel16u(sz.x, sz.y);
-					uint32_t capacity = sz.x * sz.y;
-					uint16_t* buffer = frame.mChannelDepth.getData();
-					depthFrame->CopyFrameDataToArray(capacity, buffer);
+				if ( SUCCEEDED( hr ) ) {
+					frame.mTimeStamp[ Frame::TimeStamp::TIMESTAMP_DEPTH ] = timeStamp;
+
+					frame.mChannelDepth	= Channel16u( sz.x, sz.y );
+					uint32_t capacity	= sz.x * sz.y;
+					uint16_t* buffer	= frame.mChannelDepth.getData();
+					depthFrame->CopyFrameDataToArray( capacity, buffer );
 				}
 			}
-			if (depthFrame != nullptr) {
+			if ( depthFrame != nullptr ) {
 				depthFrame->Release();
 				depthFrame = nullptr;
 			}
@@ -1014,27 +1105,29 @@ void Device::update()
 		}
 	}
 	
-	if (mDeviceOptions.isInfraredEnabled() && KCBIsFrameReady(mKinect, FrameSourceTypes_Infrared )) {
+	if ( mDeviceOptions.isInfraredEnabled() && KCBIsFrameReady( mKinect, FrameSourceTypes_Infrared ) ) {
 		KCBFrameDescription frameDescription;
 		Vec2i sz			= Vec2i::zero();
 		int64_t timeStamp	= 0L;
 		
 		long hr = KCBGetInfraredFrameDescription( mKinect, &frameDescription );
-		sz = processFrame( &frameDescription, false );
 		if ( SUCCEEDED( hr ) ) {
 			IInfraredFrame* infraredFrame = nullptr;
+
+			sz = processFrame( &frameDescription, false );
 			hr = KCBGetIInfraredFrame( mKinect, &infraredFrame );
-			if (SUCCEEDED(hr)) {
-				hr = infraredFrame->get_RelativeTime(&timeStamp);
-				if (SUCCEEDED(hr)) {
-					frame.mTimeStamp[Frame::TimeStamp::TIMESTAMP_INFRARED] = timeStamp;
-					frame.mChannelInfrared = Channel16u(sz.x, sz.y);
-					uint32_t capacity = sz.x * sz.y;
-					uint16_t* buffer = frame.mChannelInfrared.getData();
-					infraredFrame->CopyFrameDataToArray(capacity, buffer);
+			if ( SUCCEEDED( hr ) ) {
+				hr = infraredFrame->get_RelativeTime( &timeStamp );
+				if ( SUCCEEDED( hr ) ) {
+					frame.mTimeStamp[ Frame::TimeStamp::TIMESTAMP_INFRARED ] = timeStamp;
+
+					frame.mChannelInfrared	= Channel16u( sz.x, sz.y );
+					uint32_t capacity		= sz.x * sz.y;
+					uint16_t* buffer		= frame.mChannelInfrared.getData();
+					infraredFrame->CopyFrameDataToArray( capacity, buffer );
 				}
 			}
-			if (infraredFrame != nullptr) {
+			if ( infraredFrame != nullptr ) {
 				infraredFrame->Release();
 				infraredFrame = nullptr;
 			}
@@ -1044,29 +1137,31 @@ void Device::update()
 		}
 	}
 
-	if (mDeviceOptions.isInfraredLongExposureEnabled() && KCBIsFrameReady(mKinect, FrameSourceTypes_LongExposureInfrared)) {
+	if ( mDeviceOptions.isInfraredLongExposureEnabled() && KCBIsFrameReady( mKinect, FrameSourceTypes_LongExposureInfrared ) ) {
 		KCBFrameDescription frameDescription;
 		Vec2i sz			= Vec2i::zero();
 		int64_t timeStamp	= 0L;
 
 		long hr = KCBGetLongExposureInfraredFrameDescription( mKinect, &frameDescription );
-		sz = processFrame( &frameDescription, false );
 		if ( SUCCEEDED( hr ) ) {
-			ILongExposureInfraredFrame* infraredFrame = nullptr;
-			hr = KCBGetILongExposureInfraredFrame(mKinect, &infraredFrame);
-			if (SUCCEEDED(hr)) {
-				hr = infraredFrame->get_RelativeTime(&timeStamp);
-				if (SUCCEEDED(hr)) {
-					frame.mTimeStamp[Frame::TimeStamp::TIMESTAMP_INFRARED_LONG_EXPOSURE] = timeStamp;
-					frame.mChannelInfraredLongExposure = Channel16u(sz.x, sz.y);
-					uint32_t capacity = sz.x * sz.y;
-					uint16_t* buffer = frame.mChannelInfraredLongExposure.getData();
-					infraredFrame->CopyFrameDataToArray(capacity, buffer);
+			ILongExposureInfraredFrame* infraredLongExposureFrame = nullptr;
+			
+			sz = processFrame( &frameDescription, false );
+			hr = KCBGetILongExposureInfraredFrame( mKinect, &infraredLongExposureFrame );
+			if ( SUCCEEDED( hr ) ) {
+				hr = infraredLongExposureFrame->get_RelativeTime( &timeStamp );
+				if ( SUCCEEDED( hr ) ) {
+					frame.mTimeStamp[ Frame::TimeStamp::TIMESTAMP_INFRARED_LONG_EXPOSURE ] = timeStamp;
+
+					frame.mChannelInfraredLongExposure	= Channel16u(sz.x, sz.y);
+					uint32_t capacity					= sz.x * sz.y;
+					uint16_t* buffer					= frame.mChannelInfraredLongExposure.getData();
+					infraredLongExposureFrame->CopyFrameDataToArray( capacity, buffer );
 				}
 			}
-			if (infraredFrame != nullptr) {
-				infraredFrame->Release();
-				infraredFrame = nullptr;
+			if ( infraredLongExposureFrame != nullptr ) {
+				infraredLongExposureFrame->Release();
+				infraredLongExposureFrame = nullptr;
 			}
 		}
 		if ( timeStamp > frame.getTimeStamp( Frame::TimeStamp::TIMESTAMP_DEFAULT ) ) {
