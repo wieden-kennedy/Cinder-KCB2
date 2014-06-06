@@ -41,8 +41,10 @@
 #include "cinder/Exception.h"
 #include "cinder/Quaternion.h"
 #include "cinder/Surface.h"
+#include <atomic>
 #include <functional>
 #include <map>
+#include <thread>
 #include "ole2.h"
 
 #if defined( _DEBUG )
@@ -255,6 +257,14 @@ public:
 	const Frame&								getFrame() const;
 	//KinectStatus								getStatus() const;
 
+	template<typename T, typename Y>
+	inline void									connectFrameEventHandler( T eventHandler, Y* obj )
+	{
+		connectFrameEventHandler( std::bind( eventHandler, obj, std::placeholders::_1 ) );
+	}
+
+	void										connectFrameEventHandler( const std::function<void(Frame)>& eventHandler );
+
 	ci::Vec2i									mapCameraToColor( const ci::Vec3f& v ) const;
 	std::vector<ci::Vec2i>						mapCameraToColor( const std::vector<ci::Vec3f>& v ) const;
 	ci::Vec2i									mapCameraToDepth( const ci::Vec3f& v ) const;
@@ -268,15 +278,19 @@ public:
 protected:
 	Device();
 
+	virtual void								run();
 	virtual void								update();
 
-	std::function<void ( Frame frame )>			mEventHandler;
+	std::function<void ( Frame )>				mFrameEventHandler;
 	
 	double										mAudioReadTime;
 	DeviceOptions								mDeviceOptions;
 	Frame										mFrame;
 	KCBHANDLE									mKinect;
 	//KinectStatus								mStatus;
+	std::atomic_bool							mNewData;
+	std::atomic_bool							mRunning;
+	std::shared_ptr<std::thread>				mThread;
 public:
 
 	//////////////////////////////////////////////////////////////////////////////////////////////
