@@ -120,6 +120,12 @@ void BodyApp::setup()
 
 	mDevice = Kinect2::Device::create();
 	mDevice->start( Kinect2::DeviceOptions().enableColor( false ).enableBody().enableBodyIndex() );
+	mDevice->connectFrameEventHandler( [ & ]( Kinect2::Frame frame )
+	{
+		if ( frame.getTimeStamp() > mFrame.getTimeStamp() ) {
+			mFrame = frame;
+		}
+	} );
 	
 	console() << Kinect2::getDeviceCount() << " device(s) connected." << endl;
 	map<size_t, string> deviceMap = Kinect2::getDeviceMap();
@@ -141,10 +147,6 @@ void BodyApp::update()
 	if ( mFullScreen != isFullScreen() ) {
 		setFullScreen( mFullScreen );
 		mFullScreen = isFullScreen();
-	}
-
-	if ( mDevice && mDevice->getFrame().getTimeStamp() > mFrame.getTimeStamp() ) {
-		mFrame = mDevice->getFrame();
 	}
 }
 
