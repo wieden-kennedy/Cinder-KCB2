@@ -381,7 +381,8 @@ mTrackingState( TrackingState::TrackingState_NotTracked )
 
 Body::Joint::Joint( const Vec3f& position, const Quatf& orientation, TrackingState trackingState,
 	JointType parentJoint )
-: mOrientation( orientation ), mParentJoint( parentJoint ), mTrackingState( trackingState )
+: mOrientation( orientation ), mPosition( position ), mParentJoint( parentJoint ), 
+mTrackingState( trackingState )
 {
 }
 
