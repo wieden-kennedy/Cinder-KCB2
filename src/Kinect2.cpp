@@ -288,16 +288,9 @@ string wcharToString( wchar_t* v )
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 DeviceOptions::DeviceOptions()
-: mEnabledAudio( false ), mEnabledBody( false ), 
-mEnabledBodyIndex( false ), mEnabledColor( true ), mEnabledDepth( true ), 
-mEnabledInfrared( false ), mEnabledInfraredLongExposure( false )
+: mEnabledBody( false ), mEnabledBodyIndex( false ), mEnabledColor( true ), 
+mEnabledDepth( true ), mEnabledInfrared( false ), mEnabledInfraredLongExposure( false )
 {
-}
-
-DeviceOptions& DeviceOptions::enableAudio( bool enable )
-{
-	mEnabledAudio = enable;
-	return *this;
 }
 
 DeviceOptions& DeviceOptions::enableBody( bool enable )
@@ -334,11 +327,6 @@ DeviceOptions& DeviceOptions::enableInfraredLongExposure( bool enable )
 {
 	mEnabledInfraredLongExposure = enable;
 	return *this;
-}
-
-bool DeviceOptions::isAudioEnabled() const
-{
-	return mEnabledAudio;
 }
 
 bool DeviceOptions::isBodyEnabled() const
@@ -404,47 +392,6 @@ const Quatf& Body::Joint::getOrientation() const
 TrackingState Body::Joint::getTrackingState() const
 {
 	return mTrackingState;
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////
-
-Audio::Audio()
-	: mBeamAngle( 0.0f ), mBeamAngleConfidence( 0.0f ), mBuffer( nullptr ), 
-	mBufferSize( 0 )
-{
-}
-
-Audio::~Audio()
-{
-	if ( mBuffer != nullptr ) {
-		delete [] mBuffer;
-		mBuffer = nullptr;
-	}
-}
-
-float Audio::getBeamAngle() const
-{
-	return mBeamAngle;
-}
-
-float Audio::getBeamAngleConfidence() const
-{
-	return mBeamAngleConfidence;
-}
-
-uint8_t* Audio::getBuffer() const
-{
-	return mBuffer;
-}
-
-unsigned long Audio::getBufferSize() const
-{
-	return mBufferSize;
-}
-
-WAVEFORMATEX Audio::getFormat() const
-{
-	return mFormat;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
@@ -538,11 +485,6 @@ mFovDiagonalDepth( 0.0f ), mFovHorizontalDepth( 0.0f ), mFovVerticalDepth( 0.0f 
 	}
 }
 
-const AudioRef& Frame::getAudio() const
-{
-	return mAudio;
-}
-
 Vec2i Frame::getColorSize()
 {
 	return Vec2i( 1920, 1080 ); 
@@ -629,7 +571,7 @@ DeviceRef Device::create()
 }
 
 Device::Device()
-	: mAudioReadTime( 0.0 ), mKinect(KCB_INVALID_HANDLE)//, mStatus( KinectStatus::KinectStatus_Undefined )
+	: mKinect(KCB_INVALID_HANDLE)//, mStatus( KinectStatus::KinectStatus_Undefined )
 {
 	App::get()->getSignalUpdate().connect( bind( &Device::update, this ) );
 }
@@ -834,32 +776,6 @@ void Device::run()
 			}
 			return sz;
 		};
-
-		//AudioRef audio;
-		//double e = app::getElapsedSeconds();
-		//if ( mDeviceOptions.isAudioEnabled() && KCBIsFrameReady( mKinect, FrameSourceTypes_Audio ) ) {
-		//	WAVEFORMATEX format;
-		//	long hr = KCBGetAudioFormat( mKinect, &format );
-		//	if ( SUCCEEDED( hr ) ) {
-		//		KCBAudioFrame* audioFrame		= new KCBAudioFrame();
-		//		audioFrame->cAudioBufferSize	= 4;
-		//		audioFrame->pAudioBuffer		= new uint8_t[ audioFrame->cAudioBufferSize * format.nBlockAlign ];
-		//		hr = KCBGetAudioFrame( mKinect, audioFrame );
-		//		if ( SUCCEEDED( hr ) ) {
-		//			audio = AudioRef( new Audio() );
-		//			audio->mBeamAngle			= audioFrame->fBeamAngle;
-		//			audio->mBeamAngleConfidence	= audioFrame->fBeamAngleConfidence;
-		//			audio->mBufferSize			= audioFrame->ulBytesRead;
-		//			if ( audioFrame->ulBytesRead > 0 ) {
-		//				//audio->mBuffer				= new uint8_t[ audio->mBufferSize ];
-		//				//memcpy( frame.mAudio->mBuffer, audioFrame->pAudioBuffer, audio->mBufferSize );
-		//			}
-		//		}
-		//		delete [] audioFrame->pAudioBuffer;
-		//		delete audioFrame;
-		//	}
-		//	mAudioReadTime = e;
-		//}
 
 		if ( mDeviceOptions.isBodyEnabled() && KCBIsFrameReady(mKinect, FrameSourceTypes_Body ) ) {
 			int64_t timeStamp					= 0L;
@@ -1146,7 +1062,6 @@ void Device::run()
 		}
 
 		if ( frame.getTimeStamp( Frame::TimeStamp::TIMESTAMP_DEFAULT ) > mFrame.getTimeStamp( Frame::TimeStamp::TIMESTAMP_DEFAULT ) ) {
-			//mFrame.mAudio												= audio;
 			mFrame.mFovDiagonalColor									= frame.mFovDiagonalColor;
 			mFrame.mFovHorizontalColor									= frame.mFovHorizontalColor;
 			mFrame.mFovVerticalColor									= frame.mFovVerticalColor;

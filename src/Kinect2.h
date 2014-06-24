@@ -87,7 +87,6 @@ class DeviceOptions
 public:
 	DeviceOptions();
 	
-	DeviceOptions&								enableAudio( bool enable = true );
 	DeviceOptions&								enableBody( bool enable = true );
 	DeviceOptions&								enableBodyIndex( bool enable = true );
 	DeviceOptions&								enableColor( bool enable = true );
@@ -95,7 +94,6 @@ public:
 	DeviceOptions&								enableInfrared( bool enable = true );
 	DeviceOptions&								enableInfraredLongExposure( bool enable = true );
 
-	bool										isAudioEnabled() const;
 	bool										isBodyEnabled() const;
 	bool										isBodyIndexEnabled() const;
 	bool										isColorEnabled() const;
@@ -103,7 +101,6 @@ public:
 	bool										isInfraredEnabled() const;
 	bool										isInfraredLongExposureEnabled() const;
 protected:
-	bool										mEnabledAudio;
 	bool										mEnabledBody;
 	bool										mEnabledBodyIndex;
 	bool										mEnabledColor;
@@ -115,30 +112,6 @@ protected:
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 class Device;
-
-typedef std::shared_ptr<class Audio> AudioRef;
-
-class Audio
-{
-public:
-	~Audio();
-
-	float			getBeamAngle() const;
-	float			getBeamAngleConfidence() const;
-	uint8_t*		getBuffer() const;
-	unsigned long	getBufferSize() const;
-	WAVEFORMATEX	getFormat() const;
-protected:
-	Audio();
-
-	float			mBeamAngle;
-	float			mBeamAngleConfidence;
-	uint8_t*		mBuffer;
-	unsigned long	mBufferSize;
-	WAVEFORMATEX	mFormat;
-
-	friend class	Device;
-};
 
 class Body
 {
@@ -207,7 +180,6 @@ public:
 	static ci::Vec2i							getColorSize();
 	static ci::Vec2i							getDepthSize();
 
-	const AudioRef&								getAudio() const;
 	const std::vector<Body>&					getBodies() const;
 	const ci::Channel8u&						getBodyIndex() const;
 	const ci::Surface8u&						getColor() const;
@@ -222,7 +194,6 @@ public:
 	const ci::Channel16u&						getInfraredLongExposure() const;
 	long long									getTimeStamp( TimeStamp timeStamp = TimeStamp::TIMESTAMP_DEFAULT ) const;
 protected:
-	AudioRef									mAudio;
 	std::vector<Body>							mBodies;
 	ci::Channel8u								mChannelBodyIndex;
 	ci::Channel16u								mChannelDepth;
@@ -283,7 +254,6 @@ protected:
 
 	std::function<void ( Frame )>				mFrameEventHandler;
 	
-	double										mAudioReadTime;
 	DeviceOptions								mDeviceOptions;
 	Frame										mFrame;
 	KCBHANDLE									mKinect;
