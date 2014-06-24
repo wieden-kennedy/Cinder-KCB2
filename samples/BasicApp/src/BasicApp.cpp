@@ -104,11 +104,15 @@ void BasicApp::setup()
 
 	mDevice = Kinect2::Device::create();
 	mDevice->start( Kinect2::DeviceOptions().enableInfrared().enableBodyIndex() );
+	mDevice->connectFrameEventHandler( [&]( const Kinect2::Frame& frame )
+	{
+		mFrame = frame;
+	} );
 	
-	console( ) << Kinect2::getDeviceCount() << " device(s) connected." << endl;
+	console() << Kinect2::getDeviceCount() << " device(s) connected." << endl;
 	map<size_t, string> deviceMap = Kinect2::getDeviceMap();
 	for ( const auto& device : deviceMap ) {
-		console( ) << "Index: " << device.first << ", ID: " << device.second << endl;
+		console() << "Index: " << device.first << ", ID: " << device.second << endl;
 	}
 
 	mParams = params::InterfaceGl::create( "Params", Vec2i( 200, 100 ) );
@@ -124,10 +128,6 @@ void BasicApp::update()
 	if ( mFullScreen != isFullScreen() ) {
 		setFullScreen( mFullScreen );
 		mFullScreen = isFullScreen();
-	}
-
-	if ( mDevice ) {
-		mFrame = mDevice->getFrame();
 	}
 }
 
