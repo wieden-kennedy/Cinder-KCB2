@@ -79,6 +79,7 @@ void BodyApp::draw()
 	}
 
 	if ( mFrame.getBodyIndex() ) {
+		gl::color( ColorAf( Colorf::white(), 0.15f ) );
 		gl::TextureRef tex = gl::Texture::create( Kinect2::colorizeBodyIndex( mFrame.getBodyIndex() ) );
 		gl::draw( tex, tex->getBounds(), Rectf( getWindowBounds() ) );
 	}
@@ -119,7 +120,7 @@ void BodyApp::setup()
 	mFullScreen	= false;
 
 	mDevice = Kinect2::Device::create();
-	mDevice->start( Kinect2::DeviceOptions().enableColor( false ).enableBody().enableBodyIndex().enableDepth() );
+	mDevice->start( Kinect2::DeviceOptions().enableColor( false ).enableBody().enableBodyIndex() );
 	mDevice->connectFrameEventHandler( [ & ]( Kinect2::Frame frame )
 	{
 		if ( frame.getTimeStamp() > mFrame.getTimeStamp() ) {
