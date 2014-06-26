@@ -615,10 +615,10 @@ const Channel16u& Frame::getInfraredLongExposure() const
 
 long long Frame::getTimeStamp( TimeStamp timeStamp ) const
 {
-	if ( mTimeStamp.find( timeStamp ) == mTimeStamp.end() ) {
-		timeStamp = TimeStamp::TIMESTAMP_DEFAULT;
+	if( mTimeStamp.count( timeStamp ) ) {
+		return mTimeStamp.at( timeStamp );
 	}
-	return mTimeStamp.at( timeStamp );
+	return 0L;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
@@ -1145,43 +1145,40 @@ void Device::run()
 			}
 		}
 
-		if ( frame.getTimeStamp( Frame::TimeStamp::TIMESTAMP_DEFAULT ) > mFrame.getTimeStamp( Frame::TimeStamp::TIMESTAMP_DEFAULT ) ) {
-			//mFrame.mAudio												= audio;
-			mFrame.mFovDiagonalColor									= frame.mFovDiagonalColor;
-			mFrame.mFovHorizontalColor									= frame.mFovHorizontalColor;
-			mFrame.mFovVerticalColor									= frame.mFovVerticalColor;
-			mFrame.mFovDiagonalDepth									= frame.mFovDiagonalDepth;
-			mFrame.mFovHorizontalDepth									= frame.mFovHorizontalDepth;
-			mFrame.mFovVerticalDepth									= frame.mFovVerticalDepth;
-			mFrame.mTimeStamp[ Frame::TimeStamp::TIMESTAMP_DEFAULT ]	= frame.getTimeStamp( Frame::TimeStamp::TIMESTAMP_DEFAULT );
-			for ( size_t i = 0; i < 6; ++i ) {
-				Frame::TimeStamp ts = (Frame::TimeStamp)i;
-				if ( frame.getTimeStamp( ts ) > mFrame.getTimeStamp( ts ) ) {
-					mFrame.mTimeStamp[ ts ]	= frame.mTimeStamp[ ts ];
-					switch ( ts ) {
-					case Frame::TimeStamp::TIMESTAMP_BODY:
-						mFrame.mBodies = frame.mBodies;
-						break;
-					case Frame::TimeStamp::TIMESTAMP_BODY_INDEX:
-						mFrame.mChannelBodyIndex = frame.mChannelBodyIndex;
-						break;
-					case Frame::TimeStamp::TIMESTAMP_COLOR:
-						mFrame.mSurfaceColor = frame.mSurfaceColor;
-						break;
-					case Frame::TimeStamp::TIMESTAMP_DEPTH:
-						mFrame.mChannelDepth = frame.mChannelDepth;
-						break;
-					case Frame::TimeStamp::TIMESTAMP_INFRARED:
-						mFrame.mChannelInfrared = frame.mChannelInfrared;
-						break;
-					case Frame::TimeStamp::TIMESTAMP_INFRARED_LONG_EXPOSURE:
-						mFrame.mChannelInfraredLongExposure = frame.mChannelInfraredLongExposure;
-						break;
-					}
+		for( size_t i = 0; i < 6; ++i ) {
+			Frame::TimeStamp ts = static_cast<Frame::TimeStamp>( i );
+			if( frame.getTimeStamp( ts ) > mFrame.getTimeStamp( ts ) ) {
+				mFrame.mTimeStamp.at( ts ) = frame.mTimeStamp.at( ts );
+				switch( ts ) {
+				case Frame::TimeStamp::TIMESTAMP_DEFAULT:
+					mFrame.mFovDiagonalColor = frame.mFovDiagonalColor;
+					mFrame.mFovHorizontalColor = frame.mFovHorizontalColor;
+					mFrame.mFovVerticalColor = frame.mFovVerticalColor;
+					mFrame.mFovDiagonalDepth = frame.mFovDiagonalDepth;
+					mFrame.mFovHorizontalDepth = frame.mFovHorizontalDepth;
+					mFrame.mFovVerticalDepth = frame.mFovVerticalDepth;
+					break;
+				case Frame::TimeStamp::TIMESTAMP_BODY:
+					mFrame.mBodies = frame.mBodies;
+					break;
+				case Frame::TimeStamp::TIMESTAMP_BODY_INDEX:
+					mFrame.mChannelBodyIndex = frame.mChannelBodyIndex;
+					break;
+				case Frame::TimeStamp::TIMESTAMP_COLOR:
+					mFrame.mSurfaceColor = frame.mSurfaceColor;
+					break;
+				case Frame::TimeStamp::TIMESTAMP_DEPTH:
+					mFrame.mChannelDepth = frame.mChannelDepth;
+					break;
+				case Frame::TimeStamp::TIMESTAMP_INFRARED:
+					mFrame.mChannelInfrared = frame.mChannelInfrared;
+					break;
+				case Frame::TimeStamp::TIMESTAMP_INFRARED_LONG_EXPOSURE:
+					mFrame.mChannelInfraredLongExposure = frame.mChannelInfraredLongExposure;
+					break;
 				}
+				mNewData = true;
 			}
-
-			mNewData = true;
 		}
 
 		//KCBSensorStatus( mKinect, &mStatus );
