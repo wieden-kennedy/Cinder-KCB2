@@ -615,10 +615,13 @@ const Channel16u& Frame::getInfraredLongExposure() const
 
 long long Frame::getTimeStamp( TimeStamp timeStamp ) const
 {
-	if( mTimeStamp.count( timeStamp ) ) {
-		return mTimeStamp.at( timeStamp );
+	if ( mTimeStamp.find( timeStamp ) == mTimeStamp.end() ) {
+		timeStamp = TimeStamp::TIMESTAMP_DEFAULT;
 	}
-	return 0L;
+	if ( mTimeStamp.count( timeStamp ) ) {
+ 		return mTimeStamp.at( timeStamp );
+  	}
+ 	return 0L;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
@@ -985,7 +988,7 @@ void Device::run()
 			}
 		}
 
-		if (mDeviceOptions.isBodyIndexEnabled() && KCBIsFrameReady( mKinect, FrameSourceTypes_BodyIndex ) ) {
+		if ( mDeviceOptions.isBodyIndexEnabled() && KCBIsFrameReady( mKinect, FrameSourceTypes_BodyIndex ) ) {
 			KCBFrameDescription frameDescription;
 			Vec2i sz			= Vec2i::zero();
 			int64_t timeStamp	= 0L;
@@ -1017,7 +1020,7 @@ void Device::run()
 			}
 		}
 
-		if (mDeviceOptions.isColorEnabled() && KCBIsFrameReady( mKinect, FrameSourceTypes_Color ) ) {
+		if ( mDeviceOptions.isColorEnabled() && KCBIsFrameReady( mKinect, FrameSourceTypes_Color ) ) {
 			KCBFrameDescription frameDescription;
 			Vec2i sz			= Vec2i::zero();
 			int64_t timeStamp	= 0L;
@@ -1145,18 +1148,18 @@ void Device::run()
 			}
 		}
 
-		for( size_t i = 0; i < 6; ++i ) {
+		for ( size_t i = 0; i < 6; ++i ) {
 			Frame::TimeStamp ts = static_cast<Frame::TimeStamp>( i );
-			if( frame.getTimeStamp( ts ) > mFrame.getTimeStamp( ts ) ) {
+			if ( frame.getTimeStamp( ts ) > mFrame.getTimeStamp( ts ) ) {
 				mFrame.mTimeStamp.at( ts ) = frame.mTimeStamp.at( ts );
 				switch( ts ) {
 				case Frame::TimeStamp::TIMESTAMP_DEFAULT:
-					mFrame.mFovDiagonalColor = frame.mFovDiagonalColor;
-					mFrame.mFovHorizontalColor = frame.mFovHorizontalColor;
-					mFrame.mFovVerticalColor = frame.mFovVerticalColor;
-					mFrame.mFovDiagonalDepth = frame.mFovDiagonalDepth;
-					mFrame.mFovHorizontalDepth = frame.mFovHorizontalDepth;
-					mFrame.mFovVerticalDepth = frame.mFovVerticalDepth;
+					mFrame.mFovDiagonalColor	= frame.mFovDiagonalColor;
+					mFrame.mFovHorizontalColor	= frame.mFovHorizontalColor;
+					mFrame.mFovVerticalColor	= frame.mFovVerticalColor;
+					mFrame.mFovDiagonalDepth	= frame.mFovDiagonalDepth;
+					mFrame.mFovHorizontalDepth	= frame.mFovHorizontalDepth;
+					mFrame.mFovVerticalDepth	= frame.mFovVerticalDepth;
 					break;
 				case Frame::TimeStamp::TIMESTAMP_BODY:
 					mFrame.mBodies = frame.mBodies;

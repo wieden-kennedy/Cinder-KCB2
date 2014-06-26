@@ -70,7 +70,7 @@ void BodyApp::draw()
 	gl::clear( Colorf::black() );
 	gl::disableDepthRead();
 	gl::disableDepthWrite();
-	gl::disableAlphaBlending();
+	gl::enableAlphaBlending();
 	gl::color( ColorAf::white() );
 
 	if ( mFrame.getDepth() ) {
@@ -83,7 +83,7 @@ void BodyApp::draw()
 		gl::draw( tex, tex->getBounds(), Rectf( getWindowBounds() ) );
 	}
 
-	gl::color(ColorAf::white());
+	gl::color( ColorAf::white() );
 	gl::pushMatrices();
 	gl::scale( Vec2f( getWindowSize() ) / Vec2f( mFrame.getDepthSize() ) );
 	for ( const Kinect2::Body& body : mFrame.getBodies() ) {
@@ -119,7 +119,7 @@ void BodyApp::setup()
 	mFullScreen	= false;
 
 	mDevice = Kinect2::Device::create();
-	mDevice->start( Kinect2::DeviceOptions().enableColor( false ).enableBody().enableBodyIndex() );
+	mDevice->start( Kinect2::DeviceOptions().enableColor( false ).enableBody().enableBodyIndex().enableDepth() );
 	mDevice->connectFrameEventHandler( [ & ]( Kinect2::Frame frame )
 	{
 		if ( frame.getTimeStamp() > mFrame.getTimeStamp() ) {
