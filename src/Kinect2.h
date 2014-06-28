@@ -116,12 +116,10 @@ protected:
 
 class Device;
 
-typedef std::shared_ptr<class Audio> AudioRef;
-
-class Audio
+class AudioFrame
 {
 public:
-	~Audio();
+	~AudioFrame();
 
 	float			getBeamAngle() const;
 	float			getBeamAngleConfidence() const;
@@ -129,7 +127,7 @@ public:
 	unsigned long	getBufferSize() const;
 	WAVEFORMATEX	getFormat() const;
 protected:
-	Audio();
+	AudioFrame();
 
 	float			mBeamAngle;
 	float			mBeamAngleConfidence;
@@ -207,7 +205,6 @@ public:
 	static ci::Vec2i							getColorSize();
 	static ci::Vec2i							getDepthSize();
 
-	const AudioRef&								getAudio() const;
 	const std::vector<Body>&					getBodies() const;
 	const ci::Channel8u&						getBodyIndex() const;
 	const ci::Surface8u&						getColor() const;
@@ -222,7 +219,6 @@ public:
 	const ci::Channel16u&						getInfraredLongExposure() const;
 	long long									getTimeStamp( TimeStamp timeStamp = TimeStamp::TIMESTAMP_DEFAULT ) const;
 protected:
-	AudioRef									mAudio;
 	std::vector<Body>							mBodies;
 	ci::Channel8u								mChannelBodyIndex;
 	ci::Channel16u								mChannelDepth;
@@ -258,11 +254,18 @@ public:
 	//KinectStatus								getStatus() const;
 
 	template<typename T, typename Y>
+	inline void									connectAudioFrameEventHandler( T eventHandler, Y* obj )
+	{
+		connectAudioFrameEventHandler( std::bind( eventHandler, obj, std::placeholders::_1 ) );
+	}
+
+	template<typename T, typename Y>
 	inline void									connectFrameEventHandler( T eventHandler, Y* obj )
 	{
 		connectFrameEventHandler( std::bind( eventHandler, obj, std::placeholders::_1 ) );
 	}
 
+	void										connectAudioFrameEventHandler( const std::function<void(AudioFrame)>& eventHandler );
 	void										connectFrameEventHandler( const std::function<void(Frame)>& eventHandler );
 
 	ci::Vec2i									mapCameraToColor( const ci::Vec3f& v ) const;
@@ -279,18 +282,24 @@ protected:
 	Device();
 
 	virtual void								run();
+	virtual void								runAudio();
 	virtual void								update();
 
+	std::function<void ( AudioFrame )>			mAudioFrameEventHandler;
 	std::function<void ( Frame )>				mFrameEventHandler;
 	
 	double										mAudioReadTime;
 	DeviceOptions								mDeviceOptions;
 	Frame										mFrame;
+	AudioFrame									mFrameAudio;
 	KCBHANDLE									mKinect;
 	//KinectStatus								mStatus;
 	std::atomic_bool							mNewData;
+	std::atomic_bool							mNewDataAudio;
 	std::atomic_bool							mRunning;
+	std::atomic_bool							mRunningAudio;
 	std::shared_ptr<std::thread>				mThread;
+	std::shared_ptr<std::thread>				mThreadAudio;
 public:
 
 	//////////////////////////////////////////////////////////////////////////////////////////////

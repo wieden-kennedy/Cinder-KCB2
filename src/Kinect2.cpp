@@ -408,13 +408,13 @@ TrackingState Body::Joint::getTrackingState() const
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-Audio::Audio()
+AudioFrame::AudioFrame()
 	: mBeamAngle( 0.0f ), mBeamAngleConfidence( 0.0f ), mBuffer( nullptr ), 
 	mBufferSize( 0 )
 {
 }
 
-Audio::~Audio()
+AudioFrame::~AudioFrame()
 {
 	if ( mBuffer != nullptr ) {
 		delete [] mBuffer;
@@ -422,27 +422,27 @@ Audio::~Audio()
 	}
 }
 
-float Audio::getBeamAngle() const
+float AudioFrame::getBeamAngle() const
 {
 	return mBeamAngle;
 }
 
-float Audio::getBeamAngleConfidence() const
+float AudioFrame::getBeamAngleConfidence() const
 {
 	return mBeamAngleConfidence;
 }
 
-uint8_t* Audio::getBuffer() const
+uint8_t* AudioFrame::getBuffer() const
 {
 	return mBuffer;
 }
 
-unsigned long Audio::getBufferSize() const
+unsigned long AudioFrame::getBufferSize() const
 {
 	return mBufferSize;
 }
 
-WAVEFORMATEX Audio::getFormat() const
+WAVEFORMATEX AudioFrame::getFormat() const
 {
 	return mFormat;
 }
@@ -538,11 +538,6 @@ mFovDiagonalDepth( 0.0f ), mFovHorizontalDepth( 0.0f ), mFovVerticalDepth( 0.0f 
 	}
 }
 
-const AudioRef& Frame::getAudio() const
-{
-	return mAudio;
-}
-
 Vec2i Frame::getColorSize()
 {
 	return Vec2i( 1920, 1080 ); 
@@ -632,7 +627,10 @@ DeviceRef Device::create()
 }
 
 Device::Device()
-	: mAudioReadTime( 0.0 ), mKinect(KCB_INVALID_HANDLE)//, mStatus( KinectStatus::KinectStatus_Undefined )
+	: mAudioReadTime( 0.0 ), mKinect(KCB_INVALID_HANDLE), mNewData( atomic<bool>( false ) ), 
+	mNewDataAudio( atomic<bool>( false ) ), mRunning( atomic<bool>( false ) ), 
+	mRunningAudio( atomic<bool>( false ) )
+	//, mStatus( KinectStatus::KinectStatus_Undefined )
 {
 	App::get()->getSignalUpdate().connect( bind( &Device::update, this ) );
 }
@@ -640,6 +638,11 @@ Device::Device()
 Device::~Device()
 {
 	stop();
+}
+
+void Device::connectAudioFrameEventHandler( const function<void(AudioFrame)>& eventHandler )
+{
+	mAudioFrameEventHandler = eventHandler;
 }
 
 void Device::connectFrameEventHandler( const function<void(Frame)>& eventHandler )
@@ -837,32 +840,6 @@ void Device::run()
 			}
 			return sz;
 		};
-
-		//AudioRef audio;
-		//double e = app::getElapsedSeconds();
-		//if ( mDeviceOptions.isAudioEnabled() && KCBIsFrameReady( mKinect, FrameSourceTypes_Audio ) ) {
-		//	WAVEFORMATEX format;
-		//	long hr = KCBGetAudioFormat( mKinect, &format );
-		//	if ( SUCCEEDED( hr ) ) {
-		//		KCBAudioFrame* audioFrame		= new KCBAudioFrame();
-		//		audioFrame->cAudioBufferSize	= 4;
-		//		audioFrame->pAudioBuffer		= new uint8_t[ audioFrame->cAudioBufferSize * format.nBlockAlign ];
-		//		hr = KCBGetAudioFrame( mKinect, audioFrame );
-		//		if ( SUCCEEDED( hr ) ) {
-		//			audio = AudioRef( new Audio() );
-		//			audio->mBeamAngle			= audioFrame->fBeamAngle;
-		//			audio->mBeamAngleConfidence	= audioFrame->fBeamAngleConfidence;
-		//			audio->mBufferSize			= audioFrame->ulBytesRead;
-		//			if ( audioFrame->ulBytesRead > 0 ) {
-		//				//audio->mBuffer				= new uint8_t[ audio->mBufferSize ];
-		//				//memcpy( frame.mAudio->mBuffer, audioFrame->pAudioBuffer, audio->mBufferSize );
-		//			}
-		//		}
-		//		delete [] audioFrame->pAudioBuffer;
-		//		delete audioFrame;
-		//	}
-		//	mAudioReadTime = e;
-		//}
 
 		if ( mDeviceOptions.isBodyEnabled() && KCBIsFrameReady(mKinect, FrameSourceTypes_Body ) ) {
 			int64_t timeStamp					= 0L;
@@ -1188,6 +1165,42 @@ void Device::run()
 	}
 }
 
+void Device::runAudio()
+{
+	mRunningAudio = true;
+	while ( mRunningAudio ) {
+		if ( mNewDataAudio || mKinect == KCB_INVALID_HANDLE ) {
+			std::this_thread::yield();
+			continue;
+		}
+
+		AudioFrame audio;
+		double e = app::getElapsedSeconds();
+		if ( mDeviceOptions.isAudioEnabled() && KCBIsFrameReady( mKinect, FrameSourceTypes_Audio ) ) {
+			WAVEFORMATEX format;
+			long hr = KCBGetAudioFormat( mKinect, &format );
+			if ( SUCCEEDED( hr ) ) {
+				KCBAudioFrame* audioFrame		= new KCBAudioFrame();
+				audioFrame->cAudioBufferSize	= 4;
+				audioFrame->pAudioBuffer		= new uint8_t[ audioFrame->cAudioBufferSize * format.nBlockAlign ];
+				hr = KCBGetAudioFrame( mKinect, audioFrame );
+				if ( SUCCEEDED( hr ) ) {
+					audio.mBeamAngle			= audioFrame->fBeamAngle;
+					audio.mBeamAngleConfidence	= audioFrame->fBeamAngleConfidence;
+					audio.mBufferSize			= audioFrame->ulBytesRead;
+					if ( audioFrame->ulBytesRead > 0 ) {
+						audio.mBuffer			= new uint8_t[ audio.mBufferSize ];
+						memcpy( audio.mBuffer, audioFrame->pAudioBuffer, audio.mBufferSize );
+					}
+				}
+				delete [] audioFrame->pAudioBuffer;
+				delete audioFrame;
+			}
+			mAudioReadTime = e;
+		}
+	}
+}
+
 void Device::start( const DeviceOptions& deviceOptions )
 {
 	long hr = S_OK;
@@ -1209,6 +1222,7 @@ void Device::start( const DeviceOptions& deviceOptions )
 	}
 
 	mThread = shared_ptr<thread>( new thread( &Device::run, this ) );
+	mThreadAudio = shared_ptr<thread>( new thread( &Device::runAudio, this ) );
 }
 
 void Device::stop()
@@ -1227,6 +1241,12 @@ void Device::stop()
 		mThread->join();
 		mThread.reset();
 	}
+
+	mRunningAudio = false;
+	if ( mThreadAudio ) {
+		mThreadAudio->join();
+		mThreadAudio.reset();
+	}
 }
 
 void Device::update()
@@ -1234,6 +1254,11 @@ void Device::update()
 	if ( mFrameEventHandler != nullptr && mNewData ) {
 		mFrameEventHandler( mFrame );
 		mNewData = false;
+	}
+
+	if ( mAudioFrameEventHandler != nullptr && mNewDataAudio ) {
+		mAudioFrameEventHandler( mFrameAudio );
+		mNewDataAudio = false;
 	}
 }
 

@@ -98,6 +98,10 @@ void AudioApp::setup()
 		.enableColor( false )
 		.enableDepth( false )
 		.enableInfrared() );
+	mDevice->connectFrameEventHandler( [ & ]( Kinect2::Frame frame )
+	{
+		mFrame = frame;
+	} );
 
 	mParams = params::InterfaceGl::create( "Params", Vec2i( 200, 100 ) );
 	mParams->addParam( "Frame rate",	&mFrameRate,				"", true );
@@ -112,14 +116,6 @@ void AudioApp::update()
 	if ( mFullScreen != isFullScreen() ) {
 		setFullScreen( mFullScreen );
 		mFullScreen = isFullScreen();
-	}
-
-	if ( mDevice && mDevice->getFrame().getTimeStamp() > mFrame.getTimeStamp() ) {
-		mFrame = mDevice->getFrame();
-
-		if (mFrame.getAudio()) {
-			console() << mFrame.getAudio()->getBeamAngle() << " @ " << mFrame.getAudio()->getBeamAngleConfidence() << endl;
-		}
 	}
 }
 
