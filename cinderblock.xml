@@ -2,8 +2,8 @@
 <cinder>
     <block
     name="Cinder-KCB2"
-    id="org.libcinder.kcb2"
-    author="Stephen Schieberl"
+    id="com.wk.kcb2"
+    author="Wieden+Kennedy"
     license="BSD"
     summary="Kinect v2 Common Bridge block for Cinder"
     git="git@github.com:wieden-kennedy/Cinder-KCB2.git"
