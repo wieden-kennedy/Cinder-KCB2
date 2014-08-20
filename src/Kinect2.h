@@ -38,6 +38,7 @@
 #pragma once
 
 #include "KCBv2Lib.h"
+#include <Kinect.Face.h>
 #include "cinder/Exception.h"
 #include "cinder/Quaternion.h"
 #include "cinder/Surface.h"
@@ -56,87 +57,34 @@
 
 namespace Kinect2 {
 
-ci::Channel8u									channel16To8( const ci::Channel16u& channel );
-ci::Surface8u									colorizeBodyIndex( const ci::Channel8u& bodyIndexChannel );
+ci::Channel8u													channel16To8( const ci::Channel16u& channel, uint8_t bytes = 4 );
+ci::Surface8u													colorizeBodyIndex( const ci::Channel8u& bodyIndexChannel );
 
-ci::Color8u										getBodyColor( size_t index );
-size_t											getDeviceCount();
-std::map<size_t, std::string>					getDeviceMap();
-//std::string										getStatusMessage( KinectStatus status );
+ci::Color8u														getBodyColor( size_t index );
+size_t															getDeviceCount();
+std::map<size_t, std::string>									getDeviceMap();
 
-CameraSpacePoint								toCameraSpacePoint( const ci::Vec3f& v );
-ColorSpacePoint									toColorSpacePoint( const ci::Vec2f& v );
-DepthSpacePoint									toDepthSpacePoint( const ci::Vec2f& v );
-PointF											toPointF( const ci::Vec2f& v );
-Vector4											toVector4( const ci::Quatf& q );
-Vector4											toVector4( const ci::Vec4f& v );
+CameraSpacePoint												toCameraSpacePoint( const ci::Vec3f& v );
+ColorSpacePoint													toColorSpacePoint( const ci::Vec2f& v );
+DepthSpacePoint													toDepthSpacePoint( const ci::Vec2f& v );
+PointF															toPointF( const ci::Vec2f& v );
+Vector4															toVector4( const ci::Quatf& q );
+Vector4															toVector4( const ci::Vec4f& v );
 
-ci::Quatf										toQuatf( const Vector4& v );
-ci::Vec2f										toVec2f( const PointF& v );
-ci::Vec2f										toVec2f( const ColorSpacePoint& v );
-ci::Vec2f										toVec2f( const DepthSpacePoint& v );
-ci::Vec3f										toVec3f( const CameraSpacePoint& v );
-ci::Vec4f										toVec4f( const Vector4& v );
+ci::Quatf														toQuatf( const Vector4& v );
+ci::Vec2f														toVec2f( const PointF& v );
+ci::Vec2f														toVec2f( const ColorSpacePoint& v );
+ci::Vec2f														toVec2f( const DepthSpacePoint& v );
+ci::Vec3f														toVec3f( const CameraSpacePoint& v );
+ci::Vec4f														toVec4f( const Vector4& v );
 
-std::string										wcharToString( wchar_t* v );
-
-//////////////////////////////////////////////////////////////////////////////////////////////
-
-class DeviceOptions
-{
-public:
-	DeviceOptions();
-	
-	DeviceOptions&								enableAudio( bool enable = true );
-	DeviceOptions&								enableBody( bool enable = true );
-	DeviceOptions&								enableBodyIndex( bool enable = true );
-	DeviceOptions&								enableColor( bool enable = true );
-	DeviceOptions&								enableDepth( bool enable = true );
-	DeviceOptions&								enableInfrared( bool enable = true );
-	DeviceOptions&								enableInfraredLongExposure( bool enable = true );
-
-	bool										isAudioEnabled() const;
-	bool										isBodyEnabled() const;
-	bool										isBodyIndexEnabled() const;
-	bool										isColorEnabled() const;
-	bool										isDepthEnabled() const;
-	bool										isInfraredEnabled() const;
-	bool										isInfraredLongExposureEnabled() const;
-protected:
-	bool										mEnabledAudio;
-	bool										mEnabledBody;
-	bool										mEnabledBodyIndex;
-	bool										mEnabledColor;
-	bool										mEnabledDepth;
-	bool										mEnabledInfrared;
-	bool										mEnabledInfraredLongExposure;
-};
+std::string														wcharToString( wchar_t* v );
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 class Device;
 
-class AudioFrame
-{
-public:
-	~AudioFrame();
-
-	float			getBeamAngle() const;
-	float			getBeamAngleConfidence() const;
-	uint8_t*		getBuffer() const;
-	unsigned long	getBufferSize() const;
-	WAVEFORMATEX	getFormat() const;
-protected:
-	AudioFrame();
-
-	float			mBeamAngle;
-	float			mBeamAngleConfidence;
-	uint8_t*		mBuffer;
-	unsigned long	mBufferSize;
-	WAVEFORMATEX	mFormat;
-
-	friend class	Device;
-};
+//////////////////////////////////////////////////////////////////////////////////////////////
 
 class Body
 {
@@ -150,90 +98,181 @@ public:
 	public:
 		Joint();
 		
-		uint64_t								getId() const;
-		const ci::Quatf&						getOrientation() const;
-		JointType								getParentJoint() const;
-		const ci::Vec3f&						getPosition() const;
-		TrackingState							getTrackingState() const;
+		uint64_t												getId() const;
+		const ci::Quatf&										getOrientation() const;
+		JointType												getParentJoint() const;
+		const ci::Vec3f&										getPosition() const;
+		TrackingState											getTrackingState() const;
 	protected:
 		Joint( const ci::Vec3f& position, const ci::Quatf& orientation, 
 			TrackingState trackingState, JointType parentJoint );
 		
-		ci::Quatf								mOrientation;
-		JointType								mParentJoint;
-		ci::Vec3f								mPosition;
-		TrackingState							mTrackingState;
+		ci::Quatf												mOrientation;
+		JointType												mParentJoint;
+		ci::Vec3f												mPosition;
+		TrackingState											mTrackingState;
 
-		friend class							Device;
+		friend class											Device;
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////////
 
-	float										calcConfidence( bool weighted = false ) const;
+	float														calcConfidence( bool weighted = false ) const;
 
-	uint64_t									getId() const;
-	uint8_t										getIndex() const;
-	const std::map<JointType, Body::Joint>&		getJointMap() const;
-	bool										isTracked() const;
-private:
+	uint64_t													getId() const;
+	uint8_t														getIndex() const;
+	const std::map<JointType, Body::Joint>&						getJointMap() const;
+	bool														isTracked() const;
+protected:
 	Body( uint64_t id, uint8_t index, const std::map<JointType, Body::Joint>& jointMap );
 
-	uint64_t									mId;
-	uint8_t										mIndex;
-	std::map<JointType, Body::Joint>			mJointMap;
-	bool										mTracked;
+	uint64_t													mId;
+	uint8_t														mIndex;
+	std::map<JointType, Body::Joint>							mJointMap;
+	bool														mTracked;
 
-	friend class								Device;
+	friend class												Device;
 };
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+class Face
+{
+public:
+	Face();
+protected:
+	friend class												Device;
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////////
 
 class Frame
 {
 public:
-	enum : size_t
-	{
-		TIMESTAMP_DEFAULT,
-		TIMESTAMP_BODY, 
-		TIMESTAMP_BODY_INDEX, 
-		TIMESTAMP_COLOR, 
-		TIMESTAMP_DEPTH, 
-		TIMESTAMP_INFRARED, 
-		TIMESTAMP_INFRARED_LONG_EXPOSURE
-	} typedef TimeStamp;
-
 	Frame();
 
-	static ci::Vec2i							getColorSize();
-	static ci::Vec2i							getDepthSize();
-
-	const std::vector<Body>&					getBodies() const;
-	const ci::Channel8u&						getBodyIndex() const;
-	const ci::Surface8u&						getColor() const;
-	float										getColorFovDiagonal() const;
-	float										getColorFovHorizontal() const;
-	float										getColorFovVertical() const;
-	const ci::Channel16u&						getDepth() const;
-	float										getDepthFovDiagonal() const;
-	float										getDepthFovHorizontal() const;
-	float										getDepthFovVertical() const;
-	const ci::Channel16u&						getInfrared() const;
-	const ci::Channel16u&						getInfraredLongExposure() const;
-	long long									getTimeStamp( TimeStamp timeStamp = TimeStamp::TIMESTAMP_DEFAULT ) const;
+	long long													getTimeStamp() const;
 protected:
-	std::vector<Body>							mBodies;
-	ci::Channel8u								mChannelBodyIndex;
-	ci::Channel16u								mChannelDepth;
-	ci::Channel16u								mChannelInfrared;
-	ci::Channel16u								mChannelInfraredLongExposure;
-	float										mFovDiagonalColor;
-	float										mFovHorizontalColor;
-	float										mFovVerticalColor;
-	float										mFovDiagonalDepth;
-	float										mFovHorizontalDepth;
-	float										mFovVerticalDepth;
-	ci::Surface8u								mSurfaceColor;
-	std::map<TimeStamp, long long>				mTimeStamp;
+	long long													mTimeStamp;
 
-	friend class								Device;
+	friend class												Device;
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+class CameraFrame
+{
+public:
+	CameraFrame();
+	float														getFovDiagonal() const;
+	float														getFovHorizontal() const;
+	float														getFovVertical() const;
+	const ci::Vec2i&											getSize() const;
+protected:
+	float														mFovDiagonal;
+	float														mFovHorizontal;
+	float														mFovVertical;
+	ci::Vec2i													mSize;
+
+	friend class												Device;
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+class AudioFrame : public Frame
+{
+public:
+	AudioFrame();
+	~AudioFrame();
+
+	float														getBeamAngle() const;
+	float														getBeamAngleConfidence() const;
+	uint8_t*													getBuffer() const;
+	unsigned long												getBufferSize() const;
+	WAVEFORMATEX												getFormat() const;
+protected:
+	float														mBeamAngle;
+	float														mBeamAngleConfidence;
+	uint8_t*													mBuffer;
+	unsigned long												mBufferSize;
+	WAVEFORMATEX												mFormat;
+
+	friend class												Device;
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+template<typename T>
+class ChannelFrameT : public Frame
+{
+public:
+	ChannelFrameT();
+
+	const ci::ChannelT<T>&										getChannel() const;
+protected:
+	ci::ChannelT<T>												mChannel;
+
+	friend class												Device;
+};
+
+typedef ChannelFrameT<uint8_t>									ChannelFrame8u;
+typedef ChannelFrameT<uint16_t>									ChannelFrame16u;
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+class ColorFrame : public CameraFrame, public Frame
+{
+public:
+	ColorFrame();
+
+	const ci::Surface8u&										getSurface() const;
+protected:
+	ci::Surface8u												mSurface;
+
+	friend class												Device;
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+class DepthFrame : public CameraFrame, public ChannelFrame16u
+{
+public:
+	DepthFrame();
+protected:
+	friend class												Device;
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+typedef ChannelFrame8u											BodyIndexFrame;
+typedef ChannelFrame16u											InfraredFrame;
+typedef ChannelFrame16u											InfraredLongExposureFrame;
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+class BodyFrame : public Frame
+{
+public:
+	BodyFrame();
+
+	const std::vector<Body>&									getBodies() const;
+protected:
+	std::vector<Body>											mBodies;
+
+	friend class												Device;
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+class FaceFrame : public Frame
+{
+public:
+	FaceFrame();
+	const std::vector<Face>&									getFaces() const;
+protected:
+	std::vector<Face>											mFaces;
+
+	friend class												Device;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////
@@ -242,64 +281,151 @@ typedef std::shared_ptr<Device>	DeviceRef;
 
 class Device
 {
+protected:
+
+	//////////////////////////////////////////////////////////////////////////////////////////////
+	
+	class Process
+	{
+	public:
+		Process();
+		~Process();
+
+		void													start();
+		void													stop();
+	protected:
+		std::function<void ()>									mThreadCallback;
+
+		std::atomic_bool										mNewData;
+		std::atomic_bool										mRunning;
+		std::shared_ptr<std::thread>							mThread;
+
+		friend class											Device;
+	};
+
+	//////////////////////////////////////////////////////////////////////////////////////////////
+
 public:
-	static DeviceRef							create();
+	static DeviceRef											create();
 	~Device();
 	
-	void										start( const DeviceOptions& deviceOptions = DeviceOptions() );
-	void										stop();
-
-	const DeviceOptions&						getDeviceOptions() const;
-	const Frame&								getFrame() const;
-	//KinectStatus								getStatus() const;
+	void														start();
+	void														stop();
 
 	template<typename T, typename Y>
-	inline void									connectAudioFrameEventHandler( T eventHandler, Y* obj )
+	inline void													connectAudioEventHandler( T eventHandler, Y* obj )
 	{
-		connectAudioFrameEventHandler( std::bind( eventHandler, obj, std::placeholders::_1 ) );
+		connectAudioEventHandler( std::bind( eventHandler, obj, std::placeholders::_1 ) );
 	}
 
 	template<typename T, typename Y>
-	inline void									connectFrameEventHandler( T eventHandler, Y* obj )
+	inline void													connectBodyEventHandler( T eventHandler, Y* obj )
 	{
-		connectFrameEventHandler( std::bind( eventHandler, obj, std::placeholders::_1 ) );
+		connectBodyEventHandler( std::bind( eventHandler, obj, std::placeholders::_1 ) );
 	}
 
-	void										connectAudioFrameEventHandler( const std::function<void(AudioFrame)>& eventHandler );
-	void										connectFrameEventHandler( const std::function<void(Frame)>& eventHandler );
+	template<typename T, typename Y>
+	inline void													connectBodyIndexEventHandler( T eventHandler, Y* obj )
+	{
+		connectBodyIndexEventHandler( std::bind( eventHandler, obj, std::placeholders::_1 ) );
+	}
 
-	ci::Vec2i									mapCameraToColor( const ci::Vec3f& v ) const;
-	std::vector<ci::Vec2i>						mapCameraToColor( const std::vector<ci::Vec3f>& v ) const;
-	ci::Vec2i									mapCameraToDepth( const ci::Vec3f& v ) const;
-	std::vector<ci::Vec2i>						mapCameraToDepth( const std::vector<ci::Vec3f>& v ) const;
-	ci::Vec3f									mapDepthToCamera( const ci::Vec2i& v, const ci::Channel16u& depth ) const;
-	std::vector<ci::Vec3f>						mapDepthToCamera( const std::vector<ci::Vec2i>& v, const ci::Channel16u& depth ) const;
-	std::vector<ci::Vec3f>						mapDepthToCamera( const ci::Channel16u& depth ) const;
-	ci::Vec2i									mapDepthToColor( const ci::Vec2i& v, const ci::Channel16u& depth ) const;
-	std::vector<ci::Vec2i>						mapDepthToColor( const std::vector<ci::Vec2i>& v, const ci::Channel16u& depth ) const;
-	std::vector<ci::Vec2i>						mapDepthToColor( const ci::Channel16u& depth ) const;
+	template<typename T, typename Y>
+	inline void													connectColorEventHandler( T eventHandler, Y* obj )
+	{
+		connectColorEventHandler( std::bind( eventHandler, obj, std::placeholders::_1 ) );
+	}
+
+	template<typename T, typename Y>
+	inline void													connectDepthEventHandler( T eventHandler, Y* obj )
+	{
+		connectDepthEventHandler( std::bind( eventHandler, obj, std::placeholders::_1 ) );
+	}
+
+	template<typename T, typename Y>
+	inline void													connectFaceEventHandler( T eventHandler, Y* obj )
+	{
+		connectFaceEventHandler( std::bind( eventHandler, obj, std::placeholders::_1 ) );
+	}
+
+	template<typename T, typename Y>
+	inline void													connectInfraredEventHandler( T eventHandler, Y* obj )
+	{
+		connectInfraredEventHandler( std::bind( eventHandler, obj, std::placeholders::_1 ) );
+	}
+
+	template<typename T, typename Y>
+	inline void													connectInfraredLongExposureEventHandler( T eventHandler, Y* obj )
+	{
+		connectInfraredLongExposureEventHandler( std::bind( eventHandler, obj, std::placeholders::_1 ) );
+	}
+
+	void														connectAudioEventHandler( const std::function<void ( const AudioFrame& )>& eventHandler );
+	void														connectBodyEventHandler( const std::function<void ( const BodyFrame& )>& eventHandler );
+	void														connectBodyIndexEventHandler( const std::function<void ( const BodyIndexFrame& )>& eventHandler );
+	void														connectColorEventHandler( const std::function<void ( const ColorFrame& )>& eventHandler );
+	void														connectDepthEventHandler( const std::function<void ( const DepthFrame& )>& eventHandler );
+	void														connectFaceEventHandler( const std::function<void ( const FaceFrame& )>& eventHandler );
+	void														connectInfraredEventHandler( const std::function<void ( const InfraredFrame& )>& eventHandler );
+	void														connectInfraredLongExposureEventHandler( const std::function<void ( const InfraredLongExposureFrame& )>& eventHandler );
+
+	void														disconnectAudioEventHandler();
+	void														disconnectBodyEventHandler();
+	void														disconnectBodyIndexEventHandler();
+	void														disconnectColorEventHandler();
+	void														disconnectDepthEventHandler();
+	void														disconnectFaceEventHandler();
+	void														disconnectInfraredEventHandler();
+	void														disconnectInfraredLongExposureEventHandler();
+
+	ci::Vec2i													mapCameraToColor( const ci::Vec3f& v ) const;
+	std::vector<ci::Vec2i>										mapCameraToColor( const std::vector<ci::Vec3f>& v ) const;
+	ci::Vec2i													mapCameraToDepth( const ci::Vec3f& v ) const;
+	std::vector<ci::Vec2i>										mapCameraToDepth( const std::vector<ci::Vec3f>& v ) const;
+	ci::Vec3f													mapDepthToCamera( const ci::Vec2i& v, const ci::Channel16u& depth ) const;
+	std::vector<ci::Vec3f>										mapDepthToCamera( const std::vector<ci::Vec2i>& v, const ci::Channel16u& depth ) const;
+	std::vector<ci::Vec3f>										mapDepthToCamera( const ci::Channel16u& depth ) const;
+	ci::Vec2i													mapDepthToColor( const ci::Vec2i& v, const ci::Channel16u& depth ) const;
+	std::vector<ci::Vec2i>										mapDepthToColor( const std::vector<ci::Vec2i>& v, const ci::Channel16u& depth ) const;
+	std::vector<ci::Vec2i>										mapDepthToColor( const ci::Channel16u& depth ) const;
 protected:
+	enum : size_t
+	{
+		FrameType_Audio,
+		FrameType_Body, 
+		FrameType_BodyIndex, 
+		FrameType_Color, 
+		FrameType_Depth, 
+		FrameType_Face, 
+		FrameType_Infrared, 
+		FrameType_InfraredLongExposure
+	} typedef FrameType;
+	
 	Device();
 
-	virtual void								run();
-	virtual void								runAudio();
-	virtual void								update();
+	virtual void												update();
 
-	std::function<void ( AudioFrame )>			mAudioFrameEventHandler;
-	std::function<void ( Frame )>				mFrameEventHandler;
+	KCBHANDLE													mKinect;
 	
-	double										mAudioReadTime;
-	DeviceOptions								mDeviceOptions;
-	Frame										mFrame;
-	AudioFrame									mFrameAudio;
-	KCBHANDLE									mKinect;
-	//KinectStatus								mStatus;
-	std::atomic_bool							mNewData;
-	std::atomic_bool							mNewDataAudio;
-	std::atomic_bool							mRunning;
-	std::atomic_bool							mRunningAudio;
-	std::shared_ptr<std::thread>				mThread;
-	std::shared_ptr<std::thread>				mThreadAudio;
+	std::map<FrameType, Process>								mProcesses;
+	
+	std::function<void ( const AudioFrame& )>					mEventHandlerAudio;
+	std::function<void ( const BodyFrame& )>					mEventHandlerBody;
+	std::function<void ( const BodyIndexFrame& )>				mEventHandlerBodyIndex;
+	std::function<void ( const ColorFrame& )>					mEventHandlerColor;
+	std::function<void ( const DepthFrame& )>					mEventHandlerDepth;
+	std::function<void ( const FaceFrame& )>					mEventHandlerFace;
+	std::function<void ( const InfraredFrame& )>				mEventHandlerInfrared;
+	std::function<void ( const InfraredLongExposureFrame& )>	mEventHandlerInfraredLongExposure;
+
+	AudioFrame													mFrameAudio;
+	BodyFrame													mFrameBody;
+	BodyIndexFrame												mFrameBodyIndex;
+	ColorFrame													mFrameColor;
+	DepthFrame													mFrameDepth;
+	FaceFrame													mFrameFace;
+	InfraredFrame												mFrameInfrared;
+	InfraredLongExposureFrame									mFrameInfraredLongExposure;
 public:
 
 	//////////////////////////////////////////////////////////////////////////////////////////////
@@ -309,8 +435,9 @@ public:
 	public:
 		const char* what() const throw();
 	protected:
-		char									mMessage[ 2048 ];
-		friend class							Device;
+		char													mMessage[ 2048 ];
+
+		friend class											Device;
 	};
 
 	class ExcDeviceCloseFailed : public Exception 
@@ -319,6 +446,7 @@ public:
 		ExcDeviceCloseFailed( long hr ) throw();
 	};
 	
+	// FOR FUTURE USE
 	class ExcDeviceNotAvailable : public Exception 
 	{
 	public:

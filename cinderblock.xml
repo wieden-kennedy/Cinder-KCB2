@@ -5,9 +5,9 @@
     id="org.libcinder.kcb2"
     author="Stephen Schieberl"
     license="BSD"
-    summary="Kinect v2 common bridge block for Cinder"
+    summary="Kinect v2 Common Bridge block for Cinder"
     git="git@github.com:wieden-kennedy/Cinder-KCB2.git"
-    version="0.1"
+    version="0.2"
     libraryUrl="www.libcinder.org"
     >
 
