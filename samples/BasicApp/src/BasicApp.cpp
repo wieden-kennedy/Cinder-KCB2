@@ -50,7 +50,9 @@ public:
 	void						update();
 private:
 	Kinect2::DeviceRef			mDevice;
-	Kinect2::Frame				mFrame;
+	ci::Channel8u				mChannelBodyIndex;
+	ci::Channel16u				mChannelDepth;
+	ci::Channel16u				mChannelInfrared;
 	ci::Surface8u				mSurfaceColor;
 
 	float						mFrameRate;
@@ -69,20 +71,20 @@ void BasicApp::draw()
 	gl::setMatricesWindow( getWindowSize() );
 	gl::enableAlphaBlending();
 	
-	if ( mFrame.getColor() ) {
-		gl::TextureRef tex = gl::Texture::create( mFrame.getColor() );
+	if ( mSurfaceColor ) {
+		gl::TextureRef tex = gl::Texture::create( mSurfaceColor );
 		gl::draw( tex, tex->getBounds(), Rectf( Vec2f::zero(), getWindowCenter() ) );
 	}
-	if ( mFrame.getDepth() ) {
-		gl::TextureRef tex = gl::Texture::create( Kinect2::channel16To8( mFrame.getDepth() ) );
+	if ( mChannelDepth ) {
+		gl::TextureRef tex = gl::Texture::create( Kinect2::channel16To8( mChannelDepth ) );
 		gl::draw( tex, tex->getBounds(), Rectf( getWindowCenter().x, 0.0f, (float)getWindowWidth(), getWindowCenter().y ) );
 	}
-	if ( mFrame.getInfrared() ) {
-		gl::TextureRef tex = gl::Texture::create( mFrame.getInfrared() );
+	if ( mChannelInfrared ) {
+		gl::TextureRef tex = gl::Texture::create( mChannelInfrared );
 		gl::draw( tex, tex->getBounds(), Rectf( 0.0f, getWindowCenter().y, getWindowCenter().x, (float)getWindowHeight() ) );
 	}
-	if ( mFrame.getBodyIndex() ) {
-		gl::TextureRef tex = gl::Texture::create( Kinect2::colorizeBodyIndex( mFrame.getBodyIndex() ) );
+	if ( mChannelBodyIndex ) {
+		gl::TextureRef tex = gl::Texture::create( Kinect2::colorizeBodyIndex( mChannelBodyIndex ) );
 		gl::draw( tex, tex->getBounds(), Rectf( getWindowCenter(), Vec2f( getWindowSize() ) ) );
 	}
 
@@ -103,22 +105,28 @@ void BasicApp::setup()
 	mFullScreen	= false;
 
 	mDevice = Kinect2::Device::create();
-	mDevice->start( Kinect2::DeviceOptions().enableInfrared().enableBodyIndex() );
-	mDevice->connectFrameEventHandler( [&]( const Kinect2::Frame& frame )
+	mDevice->start();
+	mDevice->connectBodyIndexEventHandler( [ & ]( const Kinect2::BodyIndexFrame& frame )
 	{
-		mFrame = frame;
+		mChannelBodyIndex = frame.getChannel();
+	} );
+	mDevice->connectColorEventHandler( [ & ]( const Kinect2::ColorFrame& frame )
+	{
+		mSurfaceColor = frame.getSurface();
+	} );
+	mDevice->connectDepthEventHandler( [ & ]( const Kinect2::DepthFrame& frame )
+	{
+		mChannelDepth = frame.getChannel();
+	} );
+	mDevice->connectInfraredEventHandler( [ & ]( const Kinect2::InfraredFrame& frame )
+	{
+		mChannelInfrared = frame.getChannel();
 	} );
 	
-	console() << Kinect2::getDeviceCount() << " device(s) connected." << endl;
-	map<size_t, string> deviceMap = Kinect2::getDeviceMap();
-	for ( const auto& device : deviceMap ) {
-		console() << "Index: " << device.first << ", ID: " << device.second << endl;
-	}
-
 	mParams = params::InterfaceGl::create( "Params", Vec2i( 200, 100 ) );
-	mParams->addParam( "Frame rate",	&mFrameRate,				"", true );
-	mParams->addParam( "Full screen",	&mFullScreen,				"key=f" );
-	mParams->addButton( "Quit", bind(	&BasicApp::quit, this ),	"key=q" );
+	mParams->addParam( "Frame rate",	&mFrameRate,			"", true );
+	mParams->addParam( "Full screen",	&mFullScreen ).key( "f" );
+	mParams->addButton( "Quit",			[ & ]() { quit(); } ,	"key=q" );
 }
 
 void BasicApp::update()
