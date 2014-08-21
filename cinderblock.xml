@@ -23,4 +23,5 @@
         <buildCopy>lib/$(PlatformTarget)/KCBv2.dll</buildCopy>
     </platform>
 </block>
+<template>templates/Basic KCB2/template.xml</template>
 </cinder>

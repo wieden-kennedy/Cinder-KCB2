@@ -50,10 +50,8 @@ public:
 	void						update();
 private:
 	Kinect2::DeviceRef			mDevice;
-	ci::Channel8u				mChannelBodyIndex;
-	ci::Channel16u				mChannelDepth;
-	ci::Channel16u				mChannelInfrared;
-	ci::Surface8u				mSurfaceColor;
+	std::vector<Kinect2::Face>	mFaces;
+	ci::Surface8u				mSurface;
 
 	float						mFrameRate;
 	bool						mFullScreen;
@@ -69,23 +67,10 @@ void FaceApp::draw()
 	gl::setViewport( getWindowBounds() );
 	gl::clear();
 	gl::setMatricesWindow( getWindowSize() );
-	gl::enableAlphaBlending();
-	
-	if ( mSurfaceColor ) {
-		gl::TextureRef tex = gl::Texture::create( mSurfaceColor );
-		gl::draw( tex, tex->getBounds(), Rectf( Vec2f::zero(), getWindowCenter() ) );
-	}
-	if ( mChannelDepth ) {
-		gl::TextureRef tex = gl::Texture::create( Kinect2::channel16To8( mChannelDepth ) );
-		gl::draw( tex, tex->getBounds(), Rectf( getWindowCenter().x, 0.0f, (float)getWindowWidth(), getWindowCenter().y ) );
-	}
-	if ( mChannelInfrared ) {
-		gl::TextureRef tex = gl::Texture::create( mChannelInfrared );
-		gl::draw( tex, tex->getBounds(), Rectf( 0.0f, getWindowCenter().y, getWindowCenter().x, (float)getWindowHeight() ) );
-	}
-	if ( mChannelBodyIndex ) {
-		gl::TextureRef tex = gl::Texture::create( Kinect2::colorizeBodyIndex( mChannelBodyIndex ) );
-		gl::draw( tex, tex->getBounds(), Rectf( getWindowCenter(), Vec2f( getWindowSize() ) ) );
+
+	if ( mSurface ) {
+		gl::TextureRef tex = gl::Texture::create( mSurface );
+		gl::draw( tex, tex->getBounds(), getWindowBounds() );
 	}
 
 	mParams->draw();
@@ -93,7 +78,7 @@ void FaceApp::draw()
 
 void FaceApp::prepareSettings( Settings* settings )
 {
-	settings->prepareWindow( Window::Format().size( 800, 600 ).title( "Basic App" ) );
+	settings->prepareWindow( Window::Format().size( 1280, 760 ).title( "Face App" ) );
 	settings->setFrameRate( 60.0f );
 }
 
@@ -106,21 +91,13 @@ void FaceApp::setup()
 
 	mDevice = Kinect2::Device::create();
 	mDevice->start();
-	mDevice->connectBodyIndexEventHandler( [ & ]( const Kinect2::BodyIndexFrame& frame )
-	{
-		mChannelBodyIndex = frame.getChannel();
-	} );
 	mDevice->connectColorEventHandler( [ & ]( const Kinect2::ColorFrame& frame )
 	{
-		mSurfaceColor = frame.getSurface();
+		mSurface = frame.getSurface();
 	} );
-	mDevice->connectDepthEventHandler( [ & ]( const Kinect2::DepthFrame& frame )
+	mDevice->connectFaceEventHandler( [ & ]( const Kinect2::FaceFrame& frame )
 	{
-		mChannelDepth = frame.getChannel();
-	} );
-	mDevice->connectInfraredEventHandler( [ & ]( const Kinect2::InfraredFrame& frame )
-	{
-		mChannelInfrared = frame.getChannel();
+		mFaces = frame.getFaces();
 	} );
 	
 	mParams = params::InterfaceGl::create( "Params", Vec2i( 200, 100 ) );

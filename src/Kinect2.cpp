@@ -561,7 +561,8 @@ Device::Device()
 	mEventHandlerBodyIndex( nullptr ), mEventHandlerColor( nullptr ), 
 	mEventHandlerDepth( nullptr ), mEventHandlerFace( nullptr ), 
 	mEventHandlerInfrared( nullptr ), mEventHandlerInfraredLongExposure( nullptr ), 
-	mKinect(KCB_INVALID_HANDLE)
+	mFaceFrameReader( nullptr ), mHighDefinitionFaceFrameReader( nullptr ), 
+	mKinect( KCB_INVALID_HANDLE ), mSensor( nullptr )
 {
 	App::get()->getSignalUpdate().connect( bind( &Device::update, this ) );
 }
@@ -599,6 +600,11 @@ void Device::connectDepthEventHandler( const function<void ( const DepthFrame& )
 void Device::connectFaceEventHandler( const function<void ( const FaceFrame& )>& eventHandler )
 {
 	mEventHandlerFace = eventHandler;
+}
+
+void Device::connectFaceHighDefinitionEventHandler( const function<void ( const FaceHighDefinitionFrame& )>& eventHandler )
+{
+	mEventHandlerFaceHighDefinition = eventHandler;
 }
 
 void Device::connectInfraredEventHandler( const function<void ( const InfraredFrame& )>& eventHandler )
@@ -639,6 +645,11 @@ void Device::disconnectDepthEventHandler()
 void Device::disconnectFaceEventHandler()
 {
 	mEventHandlerFace = nullptr;
+}
+
+void Device::disconnectFaceHighDefinitionEventHandler()
+{
+	mEventHandlerFaceHighDefinition = nullptr;
 }
 
 void Device::disconnectInfraredEventHandler()
@@ -1141,11 +1152,29 @@ void Device::start()
 					if ( mEventHandlerFace != nullptr ) {
 						FaceFrame frame;
 
-						// TODO get faces
-						
 						if ( frame.getTimeStamp() > mFrameFace.getTimeStamp() ) {
 							mFrameFace			= frame;
 							process.mNewData	= true;
+						}
+					}
+				}
+			};
+			break;
+		case FrameType_FaceHighDefinition:
+			process.mThreadCallback = [ & ]()
+			{
+				while ( process.mRunning ) {
+					if ( process.mNewData || mKinect == KCB_INVALID_HANDLE ) {
+						std::this_thread::yield();
+						continue;
+					}
+
+					if ( mEventHandlerFaceHighDefinition != nullptr ) {
+						FaceHighDefinitionFrame frame;
+
+						if ( frame.getTimeStamp() > mFrameFaceHighDefinition.getTimeStamp() ) {
+							mFrameFaceHighDefinition	= frame;
+							process.mNewData		= true;
 						}
 					}
 				}
@@ -1245,6 +1274,7 @@ void Device::start()
 		}
 		process.start();
 	}
+	
 }
 
 void Device::stop()
@@ -1305,6 +1335,12 @@ void Device::update()
 				process.mNewData = false;
 			}
 			break;
+		case FrameType_FaceHighDefinition:
+			if ( mEventHandlerFaceHighDefinition != nullptr && process.mNewData ) {
+				mEventHandlerFaceHighDefinition( mFrameFaceHighDefinition );
+				process.mNewData = false;
+			}
+			break;
 		case FrameType_Infrared:
 			if ( mEventHandlerInfrared != nullptr && process.mNewData ) {
 				mEventHandlerInfrared( mFrameInfrared );
@@ -1317,6 +1353,30 @@ void Device::update()
 				process.mNewData = false;
 			}
 			break;
+		}
+	}
+
+	// Workaround to add face tracking support before it gets into KCB
+	if ( mSensor == nullptr ) {
+		long hr = GetDefaultKinectSensor( &mSensor );
+		if ( SUCCEEDED( hr ) ) {
+			if ( mSensor != nullptr ) {
+				uint8_t isOpen = 0;
+				mSensor->get_IsOpen( &isOpen );
+				if ( isOpen ) {
+					IFaceFrameSource* faceFrameSource								= nullptr;
+					IHighDefinitionFaceFrameSource* highDefinitionFaceFrameSource	= nullptr;
+
+					// TODO get frame source
+
+					if ( faceFrameSource != nullptr ) {
+						faceFrameSource->OpenReader( &mFaceFrameReader );
+					}
+					if ( highDefinitionFaceFrameSource != nullptr ) {
+						highDefinitionFaceFrameSource->OpenReader( &mHighDefinitionFaceFrameReader );
+					}
+				}
+			}
 		}
 	}
 }
