@@ -258,9 +258,26 @@ string wcharToString( wchar_t* v )
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
+Body::Hand::Hand()
+: mConfidence( TrackingConfidence_Low ), mState( HandState_Unknown )
+{
+}
+
+TrackingConfidence Body::Hand::getConfidence() const
+{
+	return mConfidence;
+}
+
+HandState Body::Hand::getState() const
+{
+	return mState;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
 Body::Joint::Joint()
 : mOrientation( Quatf() ), mParentJoint( JointType::JointType_Count ), mPosition( Vec3f::zero() ), 
-mTrackingState( TrackingState::TrackingState_NotTracked )
+mTrackingState( TrackingState_NotTracked )
 {
 }
 
@@ -294,13 +311,19 @@ TrackingState Body::Joint::getTrackingState() const
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 Body::Body()
-: mId( 0 ), mIndex( 0 ), mTracked( false )
+: mEngaged( DetectionResult_Unknown ), mId( 0 ), mIndex( 0 ), 
+mLean( Vec2f::zero() ), mLeanTrackingState( TrackingState_NotTracked ), 
+mRestricted( false ), mTracked( false )
 {
-}
-
-Body::Body( uint64_t id, uint8_t index, const map<JointType, Body::Joint>& jointMap )
-: mId( id ), mIndex( index ), mJointMap( jointMap ), mTracked( true )
-{
+	for ( size_t i = 0; i < (size_t)Activity_Count; ++i ) {
+		mActivities[ (Activity)i ] = DetectionResult_Unknown;
+	}
+	for ( size_t i = 0; i < (size_t)Appearance_Count; ++i ) {
+		mAppearances[ (Appearance)i ] = DetectionResult_Unknown;
+	}
+	for ( size_t i = 0; i < (size_t)Expression_Count; ++i ) {
+		mExpressions[ (Expression)i ] = DetectionResult_Unknown;
+	}
 }
 
 float Body::calcConfidence( bool weighted ) const
@@ -335,13 +358,13 @@ float Body::calcConfidence( bool weighted ) const
 			weights[ JointType::JointType_HandTipRight ]	= 0.002659574f;
 			weights[ JointType::JointType_ThumbRight ]		= 0.521276596f;
 		}
-		for ( map<JointType, Body::Joint>::const_iterator iter = mJointMap.begin(); iter != mJointMap.end(); ++iter ) {
+		for ( map<JointType, Joint>::const_iterator iter = mJointMap.begin(); iter != mJointMap.end(); ++iter ) {
 			if ( iter->second.getTrackingState() == TrackingState::TrackingState_Tracked ) {
 				c += weights[ iter->first ];
 			}
 		}
 	} else {
-		for ( map<JointType, Body::Joint>::const_iterator iter = mJointMap.begin(); iter != mJointMap.end(); ++iter ) {
+		for ( map<JointType, Joint>::const_iterator iter = mJointMap.begin(); iter != mJointMap.end(); ++iter ) {
 			if ( iter->second.getTrackingState() == TrackingState::TrackingState_Tracked ) {
 				c += 1.0f;
 			}
@@ -349,6 +372,31 @@ float Body::calcConfidence( bool weighted ) const
 		c /= (float)JointType::JointType_Count;
 	}
 	return c;
+}
+
+const map<Activity, DetectionResult>& Body::getActivities() const
+{
+	return mActivities;
+}
+
+const map<Appearance, DetectionResult>& Body::getAppearances() const
+{
+	return mAppearances;
+}
+
+const map<Expression, DetectionResult>& Body::getExpressions() const
+{
+	return mExpressions;
+}
+
+const Body::Hand& Body::getHandLeft() const
+{
+	return mHands[ 0 ];
+}
+
+const Body::Hand& Body::getHandRight() const
+{
+	return mHands[ 1 ];
 }
 
 uint64_t Body::getId() const 
@@ -366,6 +414,21 @@ const map<JointType, Body::Joint>& Body::getJointMap() const
 	return mJointMap; 
 }
 
+const Vec2f& Body::getLean() const
+{
+	return mLean;
+}
+
+TrackingState Body::getLeanTrackingState() const
+{
+	return mLeanTrackingState;
+}
+
+DetectionResult Body::isEngaged() const
+{
+	return mEngaged;
+}
+
 bool Body::isTracked() const 
 { 
 	return mTracked; 
@@ -374,6 +437,12 @@ bool Body::isTracked() const
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 Face::Face()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+FaceHighDefinition::FaceHighDefinition()
 {
 }
 
@@ -513,6 +582,18 @@ FaceFrame::FaceFrame()
 }
 
 const vector<Face>& FaceFrame::getFaces() const
+{
+	return mFaces;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+FaceHighDefinitionFrame::FaceHighDefinitionFrame()
+: Frame()
+{
+}
+
+const vector<FaceHighDefinition>& FaceHighDefinitionFrame::getFaces() const
 {
 	return mFaces;
 }
@@ -883,19 +964,19 @@ void Device::start()
 							for ( uint8_t i = 0; i < 6; ++i ) {
 								IBody* kinectBody = kinectBodies[ i ];
 								if ( kinectBody != nullptr ) {
+									Body body;
+									body.mIndex			= i;
 									uint8_t isTracked	= false;
 									hr					= kinectBody->get_IsTracked( &isTracked );
 									if ( SUCCEEDED( hr ) && isTracked ) {
+										body.mTracked = true;
+
 										Joint joints[ JointType_Count ];
 										kinectBody->GetJoints( JointType_Count, joints );
 
 										JointOrientation jointOrientations[ JointType_Count ];
 										kinectBody->GetJointOrientations( JointType_Count, jointOrientations );
 
-										uint64_t id = 0;
-										kinectBody->get_TrackingId( &id );
-
-										map<JointType, Body::Joint> jointMap;
 										for ( int32_t j = 0; j < JointType_Count; ++j ) {
 											JointType parentJoint = (JointType)j;
 											switch ( (JointType)j ) {
@@ -982,13 +1063,43 @@ void Device::start()
 												joints[ j ].TrackingState, 
 												parentJoint
 												);
-											jointMap.insert( pair<JointType, Body::Joint>( static_cast<JointType>( j ), joint ) );
+											body.mJointMap.insert( pair<JointType, Body::Joint>( static_cast<JointType>( j ), joint ) );
 										}
-										Body body( id, i, jointMap );
-										frame.mBodies.push_back( body );
+										
+										PointF lean;
+										kinectBody->get_Engaged( &body.mEngaged );
+										kinectBody->get_HandLeftConfidence( &body.mHands[ 0 ].mConfidence );
+										kinectBody->get_HandLeftState( &body.mHands[ 0 ].mState );
+										kinectBody->get_HandRightConfidence( &body.mHands[ 1 ].mConfidence );
+										kinectBody->get_HandRightState( &body.mHands[ 1 ].mState );
+										kinectBody->get_Lean( &lean );
+										kinectBody->get_LeanTrackingState( &body.mLeanTrackingState );
+										kinectBody->get_TrackingId( &body.mId );
+
+										body.mLean = toVec2f( lean );
+										
+										DetectionResult activities[ Activity_Count ];
+										kinectBody->GetActivityDetectionResults( (UINT)Activity_Count, activities );
+										for ( size_t i = 0; i < (size_t)Activity_Count; ++i ) {
+											body.mActivities[ (Activity)i ] = activities[ i ];
+										}
+
+										DetectionResult appearances[ Appearance_Count ];
+										kinectBody->GetAppearanceDetectionResults( (UINT)Appearance_Count, appearances );
+										for ( size_t i = 0; i < (size_t)Appearance_Count; ++i ) {
+											body.mAppearances[ (Appearance)i ] = appearances[ i ];
+										}
+
+										DetectionResult expressions[ Expression_Count ];
+										kinectBody->GetExpressionDetectionResults( (UINT)Expression_Count, expressions );
+										for ( size_t i = 0; i < (size_t)Expression_Count; ++i ) {
+											body.mExpressions[ (Expression)i ] = expressions[ i ];
+										}
 									}
 									kinectBody->Release();
 									kinectBody = nullptr;
+
+									frame.mBodies.push_back( body );
 								}
 							}
 							frame.mTimeStamp	= static_cast<long long>( timeStamp );
@@ -1366,8 +1477,6 @@ void Device::update()
 				if ( isOpen ) {
 					IFaceFrameSource* faceFrameSource								= nullptr;
 					IHighDefinitionFaceFrameSource* highDefinitionFaceFrameSource	= nullptr;
-
-					// TODO get frame source
 
 					if ( faceFrameSource != nullptr ) {
 						faceFrameSource->OpenReader( &mFaceFrameReader );

@@ -49,9 +49,11 @@ public:
 	void						setup();
 	void						update();
 private:
+	std::vector<Kinect2::Body>	mBodies;
+	ci::Channel8u				mChannelBodyIndex;
+	ci::Channel16u				mChannelDepth;
 	Kinect2::DeviceRef			mDevice;
 	std::vector<Kinect2::Face>	mFaces;
-	ci::Surface8u				mSurface;
 
 	float						mFrameRate;
 	bool						mFullScreen;
@@ -68,9 +70,37 @@ void FaceApp::draw()
 	gl::clear();
 	gl::setMatricesWindow( getWindowSize() );
 
-	if ( mSurface ) {
-		gl::TextureRef tex = gl::Texture::create( mSurface );
-		gl::draw( tex, tex->getBounds(), getWindowBounds() );
+	if ( mChannelDepth ) {
+		gl::enable( GL_TEXTURE_2D );
+		gl::TextureRef tex = gl::Texture::create( Kinect2::channel16To8( mChannelDepth ) );
+		gl::draw( tex, tex->getBounds(), Rectf( getWindowBounds() ) );
+	}
+	
+	if ( mChannelBodyIndex ) {
+		gl::enable( GL_TEXTURE_2D );
+		gl::color( ColorAf( Colorf::white(), 0.15f ) );
+		gl::TextureRef tex = gl::Texture::create( Kinect2::colorizeBodyIndex( mChannelBodyIndex ) );
+		gl::draw( tex, tex->getBounds(), Rectf( getWindowBounds() ) );
+
+		gl::color( ColorAf::white() );
+		gl::pushMatrices();
+		gl::scale( Vec2f( getWindowSize() ) / Vec2f( mChannelBodyIndex.getSize() ) );
+		gl::disable( GL_TEXTURE_2D );
+		for ( const Kinect2::Body& body : mBodies ) {
+			if ( body.isTracked() ) {
+				for ( const auto& joint : body.getJointMap() ) {
+					if ( joint.second.getTrackingState() == TrackingState::TrackingState_Tracked ) {
+						Vec2f pos( mDevice->mapCameraToDepth( joint.second.getPosition() ) );
+						gl::drawSolidCircle( pos, 5.0f, 32 );
+						Vec2f parent( mDevice->mapCameraToDepth(
+							body.getJointMap().at( joint.second.getParentJoint() ).getPosition()
+							) );
+						gl::drawLine( pos, parent );
+					}
+				}
+			}
+		}
+		gl::popMatrices();
 	}
 
 	mParams->draw();
@@ -78,28 +108,36 @@ void FaceApp::draw()
 
 void FaceApp::prepareSettings( Settings* settings )
 {
-	settings->prepareWindow( Window::Format().size( 1280, 760 ).title( "Face App" ) );
+	settings->prepareWindow( Window::Format().size( 800, 600 ).title( "Face App" ) );
 	settings->setFrameRate( 60.0f );
 }
 
 void FaceApp::setup()
 {	
-	gl::enable( GL_TEXTURE_2D );
+	gl::enableAlphaBlending();
 	
 	mFrameRate	= 0.0f;
 	mFullScreen	= false;
 
 	mDevice = Kinect2::Device::create();
 	mDevice->start();
-	mDevice->connectColorEventHandler( [ & ]( const Kinect2::ColorFrame& frame )
+	mDevice->connectBodyEventHandler( [ & ]( const Kinect2::BodyFrame& frame )
 	{
-		mSurface = frame.getSurface();
+		mBodies = frame.getBodies();
+	} );
+	mDevice->connectBodyIndexEventHandler( [ & ]( const Kinect2::BodyIndexFrame frame )
+	{
+		mChannelBodyIndex = frame.getChannel();
+	} );
+	mDevice->connectDepthEventHandler( [ & ]( const Kinect2::DepthFrame frame )
+	{
+		mChannelDepth = frame.getChannel();
 	} );
 	mDevice->connectFaceEventHandler( [ & ]( const Kinect2::FaceFrame& frame )
 	{
 		mFaces = frame.getFaces();
 	} );
-	
+		
 	mParams = params::InterfaceGl::create( "Params", Vec2i( 200, 100 ) );
 	mParams->addParam( "Frame rate",	&mFrameRate,			"", true );
 	mParams->addParam( "Full screen",	&mFullScreen ).key( "f" );

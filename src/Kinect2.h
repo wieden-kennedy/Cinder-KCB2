@@ -83,14 +83,28 @@ std::string														wcharToString( wchar_t* v );
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 class Device;
-
+	
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 class Body
 {
 public:
-	Body();
 
+	//////////////////////////////////////////////////////////////////////////////////////////////
+
+	class Hand
+	{
+	public:
+		Hand();
+
+		TrackingConfidence										getConfidence() const;
+		HandState												getState() const;
+	protected:
+		TrackingConfidence										mConfidence;
+		HandState												mState;
+		friend class											Device;
+	};
+	
 	//////////////////////////////////////////////////////////////////////////////////////////////
 
 	class Joint
@@ -117,18 +131,35 @@ public:
 
 	//////////////////////////////////////////////////////////////////////////////////////////////
 
+	Body();
+
 	float														calcConfidence( bool weighted = false ) const;
 
+	const std::map<Activity, DetectionResult>&					getActivities() const;
+	const std::map<Appearance, DetectionResult>&				getAppearances() const;
+	const std::map<Expression, DetectionResult>&				getExpressions() const;
+	const Hand&													getHandLeft() const;
+	const Hand&													getHandRight() const;
 	uint64_t													getId() const;
 	uint8_t														getIndex() const;
 	const std::map<JointType, Body::Joint>&						getJointMap() const;
+	const ci::Vec2f&											getLean() const;
+	TrackingState												getLeanTrackingState() const;
+	DetectionResult												isEngaged() const;
+	bool														isRestricted() const;
 	bool														isTracked() const;
 protected:
-	Body( uint64_t id, uint8_t index, const std::map<JointType, Body::Joint>& jointMap );
-
+	std::map<Activity, DetectionResult>							mActivities;
+	std::map<Appearance, DetectionResult>						mAppearances;
+	DetectionResult												mEngaged;
+	std::map<Expression, DetectionResult>						mExpressions;
+	Hand														mHands[ 2 ];
 	uint64_t													mId;
 	uint8_t														mIndex;
 	std::map<JointType, Body::Joint>							mJointMap;
+	ci::Vec2f													mLean;
+	TrackingState												mLeanTrackingState;
+	bool														mRestricted;
 	bool														mTracked;
 
 	friend class												Device;
@@ -461,6 +492,7 @@ protected:
 	InfraredLongExposureFrame									mFrameInfraredLongExposure;
 	
 	// TODO use KCB equivalents when they become available
+	IBodyFrameReader*											mBodyFrameReader;
 	IFaceFrameReader*											mFaceFrameReader;
 	IHighDefinitionFaceFrameReader*								mHighDefinitionFaceFrameReader;
 	IKinectSensor*												mSensor;

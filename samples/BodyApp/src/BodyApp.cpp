@@ -87,12 +87,31 @@ void BodyApp::draw()
 		gl::TextureRef tex = gl::Texture::create( Kinect2::colorizeBodyIndex( mChannelBodyIndex ) );
 		gl::draw( tex, tex->getBounds(), Rectf( getWindowBounds() ) );
 
-		gl::color( ColorAf::white() );
+		auto drawHand = [ & ]( const Kinect2::Body::Hand& hand, const Vec2f& pos ) -> void
+		{
+			switch ( hand.getState() ) {
+			case HandState_Closed:
+				gl::color( ColorAf( 1.0f, 0.0f, 0.0f, 0.5f ) );
+				break;
+			case HandState_Lasso:
+				gl::color( ColorAf( 0.0f, 0.0f, 1.0f, 0.5f ) );
+				break;
+			case HandState_Open:
+				gl::color( ColorAf( 0.0f, 1.0f, 0.0f, 0.5f ) );
+				break;
+			default:
+				gl::color( ColorAf( 0.0f, 0.0f, 0.0f, 0.0f ) );
+				break;
+			}
+			gl::drawSolidCircle( pos, 30.0f, 32 );
+		};
+
 		gl::pushMatrices();
 		gl::scale( Vec2f( getWindowSize() ) / Vec2f( mChannelBodyIndex.getSize() ) );
 		gl::disable( GL_TEXTURE_2D );
 		for ( const Kinect2::Body& body : mBodyFrame.getBodies() ) {
 			if ( body.isTracked() ) {
+				gl::color( ColorAf::white() );
 				for ( const auto& joint : body.getJointMap() ) {
 					if ( joint.second.getTrackingState() == TrackingState::TrackingState_Tracked ) {
 						Vec2f pos( mDevice->mapCameraToDepth( joint.second.getPosition() ) );
@@ -103,6 +122,8 @@ void BodyApp::draw()
 						gl::drawLine( pos, parent );
 					}
 				}
+				drawHand( body.getHandLeft(), mDevice->mapCameraToDepth( body.getJointMap().at( JointType_HandLeft ).getPosition() ) );
+				drawHand( body.getHandRight(), mDevice->mapCameraToDepth( body.getJointMap().at( JointType_HandRight ).getPosition() ) );
 			}
 		}
 		gl::popMatrices();
