@@ -44,20 +44,19 @@
 class FaceApp : public ci::app::AppBasic 
 {
 public:
-	void						draw();
-	void						prepareSettings( ci::app::AppBasic::Settings* settings );
-	void						setup();
-	void						update();
+	void							draw();
+	void							prepareSettings( ci::app::AppBasic::Settings* settings );
+	void							setup();
+	void							update();
 private:
-	std::vector<Kinect2::Body>	mBodies;
-	ci::Channel8u				mChannelBodyIndex;
-	ci::Channel16u				mChannelDepth;
-	Kinect2::DeviceRef			mDevice;
-	std::vector<Kinect2::Face>	mFaces;
+	std::vector<Kinect2::Body>		mBodies;
+	ci::Channel8u					mChannelBodyIndex;
+	ci::Channel16u					mChannelDepth;
+	Kinect2::DeviceRef				mDevice;
 
-	float						mFrameRate;
-	bool						mFullScreen;
-	ci::params::InterfaceGlRef	mParams;
+	float							mFrameRate;
+	bool							mFullScreen;
+	ci::params::InterfaceGlRef		mParams;
 };
 
 using namespace ci;
@@ -89,7 +88,7 @@ void FaceApp::draw()
 		for ( const Kinect2::Body& body : mBodies ) {
 			if ( body.isTracked() ) {
 				for ( const auto& joint : body.getJointMap() ) {
-					if ( joint.second.getTrackingState() == TrackingState::TrackingState_Tracked ) {
+					if ( joint.second.getTrackingState() == TrackingState_Tracked ) {
 						Vec2f pos( mDevice->mapCameraToDepth( joint.second.getPosition() ) );
 						gl::drawSolidCircle( pos, 5.0f, 32 );
 						Vec2f parent( mDevice->mapCameraToDepth(
@@ -132,10 +131,6 @@ void FaceApp::setup()
 	mDevice->connectDepthEventHandler( [ & ]( const Kinect2::DepthFrame frame )
 	{
 		mChannelDepth = frame.getChannel();
-	} );
-	mDevice->connectFaceEventHandler( [ & ]( const Kinect2::FaceFrame& frame )
-	{
-		mFaces = frame.getFaces();
 	} );
 		
 	mParams = params::InterfaceGl::create( "Params", Vec2i( 200, 100 ) );

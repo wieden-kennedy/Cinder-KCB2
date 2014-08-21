@@ -112,12 +112,12 @@ Color8u getBodyColor( size_t index )
 size_t getDeviceCount()
 {
 	size_t count								= 0;
-	//IKinectSensorCollection* sensorCollection	= 0;
+	//IKinectSensorCollection* sensorCollection	= nullptr;
 	//long hr = GetKinectSensorCollection( &sensorCollection );
-	//if ( SUCCEEDED( hr ) && sensorCollection != 0 ) {
-	//	IEnumKinectSensor* sensorEnum = 0;
+	//if ( SUCCEEDED( hr ) && sensorCollection != nullptr ) {
+	//	IEnumKinectSensor* sensorEnum = nullptr;
 	//	hr = sensorCollection->get_Enumerator( &sensorEnum );
-	//	if ( SUCCEEDED( hr ) || sensorEnum != 0 ) {
+	//	if ( SUCCEEDED( hr ) || sensorEnum != nullptr ) {
 	//		size_t i = 0;
 	//		while ( SUCCEEDED( hr ) && i < 8 ) {
 	//			IKinectSensor* sensor = 0;
@@ -135,17 +135,17 @@ size_t getDeviceCount()
 map<size_t, string> getDeviceMap()
 {
 	map<size_t, string> deviceMap;
-	//IKinectSensorCollection* sensorCollection	= 0;
+	//IKinectSensorCollection* sensorCollection	= nullptr;
 	//long hr = GetKinectSensorCollection( &sensorCollection );
 	//if ( SUCCEEDED( hr ) && sensorCollection != 0 ) {
-	//	IEnumKinectSensor* sensorEnum = 0;
+	//	IEnumKinectSensor* sensorEnum = nullptr;
 	//	hr = sensorCollection->get_Enumerator( &sensorEnum );
-	//	if ( SUCCEEDED( hr ) || sensorEnum != 0 ) {
+	//	if ( SUCCEEDED( hr ) || sensorEnum != nullptr ) {
 	//		size_t i = 0;
 	//		while ( SUCCEEDED( hr ) && i < 8 ) {
-	//			IKinectSensor* sensor = 0;
+	//			IKinectSensor* sensor = nullptr;
 	//			hr = sensorEnum->GetNext( &sensor );
-	//			if ( sensor != 0 ) {
+	//			if ( sensor != nullptr ) {
 	//				wchar_t wid[ 48 ];
 	//				if ( SUCCEEDED( sensor->get_UniqueKinectId( 48, wid ) ) ) {
 	//					string id = wcharToString( wid );
@@ -219,6 +219,16 @@ Quatf toQuatf( const Vector4& v )
 	return Quatf( v.w, v.x, v.y, v.z );
 }
 
+Rectf toRectf( const RectI& v )
+{
+	Rectf r;
+	r.x1 = (float)v.Left;
+	r.y1 = (float)v.Top;
+	r.x2 = (float)v.Right;
+	r.y2 = (float)v.Bottom;
+	return r;
+}
+
 Vec2f toVec2f( const PointF& v )
 {
 	return Vec2f( v.X, v.Y );
@@ -254,6 +264,43 @@ string wcharToString( wchar_t* v )
 	}
 	::SysFreeString( id );
 	return str;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+Body::Face2d::Face2d()
+{
+}
+
+const Rectf& Body::Face2d::getBoundsColor() const
+{
+	return mBoundsColor;
+}
+
+const Rectf& Body::Face2d::getBoundsInfrared() const
+{
+	return mBoundsInfrared;
+}
+
+const vector<Vec2f>& Body::Face2d::getPointsColor() const
+{
+	return mPointsColor;
+}
+
+const vector<Vec2f>& Body::Face2d::getPointsInfrared() const
+{
+	return mPointsInfrared;
+}
+
+const Quatf& Body::Face2d::getRotation() const
+{
+	return mRotation;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+Body::Face3d::Face3d()
+{
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
@@ -436,18 +483,6 @@ bool Body::isTracked() const
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-Face2d::Face2d()
-{
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////
-
-Face3d::Face3d()
-{
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////
-
 Frame::Frame()
 : mTimeStamp( 0L )
 {
@@ -576,30 +611,6 @@ const vector<Body>& BodyFrame::getBodies() const
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-Face2dFrame::Face2dFrame()
-: Frame()
-{
-}
-
-const vector<Face2d>& Face2dFrame::getFaces() const
-{
-	return mFaces;
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////
-
-Face3dFrame::Face3dFrame()
-: Frame()
-{
-}
-
-const vector<Face3d>& Face3dFrame::getFaces() const
-{
-	return mFaces;
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////
-
 Device::Process::Process()
 : mNewData( atomic<bool>( false ) ), mRunning( atomic<bool>( false ) ), 
 mThreadCallback( nullptr )
@@ -638,21 +649,45 @@ DeviceRef Device::create()
 }
 
 Device::Device()
-	: mBodyFrameReader( nullptr ), mEventHandlerAudio( nullptr ), 
-	mEventHandlerBody( nullptr ), mEventHandlerBodyIndex( nullptr ), 
-	mEventHandlerColor( nullptr ), mEventHandlerDepth( nullptr ), 
-	mEventHandlerFace2d( nullptr ), mEventHandlerFace3d( nullptr ), 
-	mEventHandlerInfrared( nullptr ), mEventHandlerInfraredLongExposure( nullptr ), 
-	mFaceFrameReader( nullptr ), mFaceFrameSource( nullptr ), 
-	mHighDefinitionFaceFrameReader( nullptr ), mHighDefinitionFaceFrameSource( nullptr ), 
-	mKinect( KCB_INVALID_HANDLE ), mSensor( nullptr )
+	: mEnabledFaceTracking2d( false ), mEnabledFaceTracking3d( false ), 
+	mEventHandlerAudio( nullptr ), mEventHandlerBody( nullptr ), 
+	mEventHandlerBodyIndex( nullptr ), mEventHandlerColor( nullptr ), 
+	mEventHandlerDepth( nullptr ), mEventHandlerInfrared( nullptr ), 
+	mEventHandlerInfraredLongExposure( nullptr ), mKinect( KCB_INVALID_HANDLE ), 
+	mSensor( nullptr )
 {
+	for ( size_t i = 0; i < BODY_COUNT; ++i ) {
+		mFaceFrameSource2d[ i ] = nullptr;
+		mFaceFrameReader2d[ i ] = nullptr;
+		mFaceFrameSource3d[ i ] = nullptr;
+		mFaceFrameReader3d[ i ] = nullptr;
+	}
+
 	App::get()->getSignalUpdate().connect( bind( &Device::update, this ) );
 }
 
 Device::~Device()
 {
 	stop();
+
+	for ( size_t i = 0; i < BODY_COUNT; ++i ) {
+		if ( mFaceFrameSource2d[ i ] != nullptr ) {
+			mFaceFrameSource2d[ i ]->Release();
+			mFaceFrameSource2d[ i ] = nullptr;
+		}
+		if ( mFaceFrameReader2d[ i ] != nullptr ) {
+			mFaceFrameReader2d[ i ]->Release();
+			mFaceFrameReader2d[ i ] = nullptr;
+		}
+		if ( mFaceFrameSource3d[ i ] != nullptr ) {
+			mFaceFrameSource3d[ i ]->Release();
+			mFaceFrameSource3d[ i ] = nullptr;
+		}
+		if ( mFaceFrameReader3d[ i ] != nullptr ) {
+			mFaceFrameReader3d[ i ]->Release();
+			mFaceFrameReader3d[ i ] = nullptr;
+		}
+	}
 }
 
 void Device::connectAudioEventHandler( const function<void ( const AudioFrame& )>& eventHandler )
@@ -680,22 +715,12 @@ void Device::connectDepthEventHandler( const function<void ( const DepthFrame& )
 	mEventHandlerDepth = eventHandler;
 }
 
-void Device::connectFace2dEventHandler( const function<void ( const Face2dFrame& )>& eventHandler )
-{
-	mEventHandlerFace2d = eventHandler;
-}
-
-void Device::connectFace3dEventHandler( const function<void ( const Face3dFrame& )>& eventHandler )
-{
-	mEventHandlerFace3d = eventHandler;
-}
-
 void Device::connectInfraredEventHandler( const function<void ( const InfraredFrame& )>& eventHandler )
 {
 	mEventHandlerInfrared = eventHandler;
 }
 
-void Device::connectInfraredLongExposureEventHandler( const function<void ( const InfraredLongExposureFrame& )>& eventHandler )
+void Device::connectInfraredLongExposureEventHandler( const function<void ( const InfraredFrame& )>& eventHandler )
 {
 	mEventHandlerInfraredLongExposure = eventHandler;
 }
@@ -725,16 +750,6 @@ void Device::disconnectDepthEventHandler()
 	mEventHandlerDepth = nullptr;
 }
 
-void Device::disconnectFace2dEventHandler()
-{
-	mEventHandlerFace2d = nullptr;
-}
-
-void Device::disconnectFace3dEventHandler()
-{
-	mEventHandlerFace3d = nullptr;
-}
-
 void Device::disconnectInfraredEventHandler()
 {
 	mEventHandlerInfrared = nullptr;
@@ -743,6 +758,26 @@ void Device::disconnectInfraredEventHandler()
 void Device::disconnectInfraredLongExposureEventHandler()
 {
 	mEventHandlerInfraredLongExposure = nullptr;
+}
+
+void Device::enableFaceTracking2d( bool enable )
+{
+	mEnabledFaceTracking2d = enable;
+}
+
+void Device::enableFaceTracking3d( bool enable )
+{
+	mEnabledFaceTracking3d = enable;
+}
+
+bool Device::isFaceTrackingEnabled2d() const
+{
+	return mEnabledFaceTracking2d;
+}
+
+bool Device::isFaceTrackingEnabled3d() const
+{
+	return mEnabledFaceTracking3d;
 }
 
 Vec2i Device::mapCameraToColor( const Vec3f& v ) const
@@ -887,16 +922,15 @@ void Device::start()
 {
 	long hr = S_OK;
 	
-	/*IKinectSensorCollection* sensorCollection = nullptr;
-	IKinectSensorCollection
-	hr = GetKinectSensorCollection( &sensorCollection );
-	if ( FAILED( hr ) || sensorCollection == 0 ) {
-		throw ExcDeviceNotAvailable( hr );
-	}
-	if ( sensorCollection != nullptr ) {
-		sensorCollection->Release();
-		sensorCollection = nullptr;
-	}*/
+	//IKinectSensorCollection* sensorCollection = nullptr;
+	//hr = GetKinectSensorCollection( &sensorCollection );
+	//if ( FAILED( hr ) || sensorCollection == 0 ) {
+	//	throw ExcDeviceNotAvailable( hr );
+	//}
+	//if ( sensorCollection != nullptr ) {
+	//	sensorCollection->Release();
+	//	sensorCollection = nullptr;
+	//}
 
 	mKinect = KCBOpenDefaultSensor();
 	if ( mKinect == KCB_INVALID_HANDLE ) {
@@ -1097,6 +1131,102 @@ void Device::start()
 										for ( size_t i = 0; i < (size_t)Expression_Count; ++i ) {
 											body.mExpressions[ (Expression)i ] = expressions[ i ];
 										}
+
+										if ( mSensor != nullptr ) {
+											if ( mEnabledFaceTracking2d ) {
+												for ( size_t i = 0; i < BODY_COUNT; ++i ) {
+													if ( mFaceFrameSource2d[ i ] == nullptr ) {
+														static const DWORD faceFrameFeatures = 
+															FaceFrameFeatures::FaceFrameFeatures_BoundingBoxInColorSpace	| 
+															FaceFrameFeatures::FaceFrameFeatures_PointsInColorSpace			|
+															FaceFrameFeatures::FaceFrameFeatures_RotationOrientation		| 
+															FaceFrameFeatures::FaceFrameFeatures_Happy						| 
+															FaceFrameFeatures::FaceFrameFeatures_RightEyeClosed				| 
+															FaceFrameFeatures::FaceFrameFeatures_LeftEyeClosed				| 
+															FaceFrameFeatures::FaceFrameFeatures_MouthOpen					| 
+															FaceFrameFeatures::FaceFrameFeatures_MouthMoved					| 
+															FaceFrameFeatures::FaceFrameFeatures_LookingAway				| 
+															FaceFrameFeatures::FaceFrameFeatures_Glasses					| 
+															FaceFrameFeatures::FaceFrameFeatures_FaceEngagement;
+
+														hr = CreateFaceFrameSource( mSensor, 0, faceFrameFeatures, &mFaceFrameSource2d[ i ] );
+														if ( SUCCEEDED( hr ) && mFaceFrameSource2d[ i ] != nullptr ) {
+															mFaceFrameSource2d[ i ]->OpenReader( &mFaceFrameReader2d[ i ] );
+														}
+													}
+													if ( mFaceFrameSource2d[ i ] != nullptr && mFaceFrameReader2d[ i ] != nullptr ) {
+														IFaceFrame* faceFrame = nullptr;
+														hr = mFaceFrameReader2d[ i ]->AcquireLatestFrame( &faceFrame );
+														if ( SUCCEEDED( hr ) && faceFrame != nullptr ) {
+															uint8_t isFaceTracked	= false;
+															hr					= faceFrame->get_IsTrackingIdValid( &isFaceTracked );
+															if ( SUCCEEDED( hr ) ) {
+																if ( isFaceTracked ) {
+
+																	IFaceFrameResult* faceFrameResult	= nullptr;
+																	RectI faceRectColor					= { 0 };
+																	RectI faceRectInfrared				= { 0 };
+																	PointF facePointsColor[ FacePointType::FacePointType_Count ];
+																	PointF facePointsInfrared[ FacePointType::FacePointType_Count ];
+																	Vector4 faceRotation;
+																	DetectionResult faceProperties[ FaceProperty::FaceProperty_Count ];
+
+																	hr = faceFrame->get_FaceFrameResult( &faceFrameResult );
+
+																	if ( SUCCEEDED( hr ) && faceFrameResult != nullptr ) {
+																		hr = faceFrameResult->get_FaceBoundingBoxInColorSpace( &faceRectColor );
+
+																		if ( SUCCEEDED( hr ) ) {
+																			hr = faceFrameResult->get_FaceBoundingBoxInInfraredSpace( &faceRectInfrared );
+																		}
+																		if ( SUCCEEDED( hr ) ) {
+																			hr = faceFrameResult->GetFacePointsInColorSpace( FacePointType::FacePointType_Count, facePointsColor );
+																		}
+																		if ( SUCCEEDED( hr ) ) {
+																			hr = faceFrameResult->GetFacePointsInInfraredSpace( FacePointType::FacePointType_Count, facePointsInfrared );
+																		}
+																		if ( SUCCEEDED( hr ) ) {
+																			hr = faceFrameResult->get_FaceRotationQuaternion( &faceRotation );
+																		}
+																		if ( SUCCEEDED( hr ) ) {
+																			hr = faceFrameResult->GetFaceProperties( FaceProperty::FaceProperty_Count, faceProperties );
+																		}
+																		if ( SUCCEEDED( hr ) ) {
+
+																			body.mFace2d.mBoundsColor		= toRectf( faceRectColor );
+																			body.mFace2d.mBoundsInfrared	= toRectf( faceRectInfrared );
+
+																		}
+																	}
+
+																	if ( faceFrameResult != nullptr ) {
+																		faceFrameResult->Release();
+																		faceFrameResult = nullptr;
+																	}	
+
+																} else {
+																	mFaceFrameSource2d[ i ]->put_TrackingId( body.getId() );
+																}
+															}
+														}
+													}
+												}
+											}
+
+											if ( mEnabledFaceTracking3d ) {
+												for ( size_t i = 0; i < BODY_COUNT; ++i ) {
+													if ( mFaceFrameSource3d[ i ] == nullptr ) {
+														hr = CreateHighDefinitionFaceFrameSource( mSensor, &mFaceFrameSource3d[ i ] );
+														if ( SUCCEEDED( hr ) && mFaceFrameSource3d[ i ] != nullptr ) {
+															mFaceFrameSource3d[ i ]->OpenReader( &mFaceFrameReader3d[ i ] );
+														}
+													}
+													if ( mFaceFrameSource3d[ i ] != nullptr && mFaceFrameReader3d[ i ] != nullptr ) {
+
+													}
+												}
+											}
+										}
 									}
 									kinectBody->Release();
 									kinectBody = nullptr;
@@ -1192,7 +1322,7 @@ void Device::start()
 									colorFrame->CopyConvertedFrameDataToArray( capacity, buffer, ColorImageFormat_Bgra );
 								}
 							}
-							if (colorFrame != nullptr) {
+							if ( colorFrame != nullptr ) {
 								colorFrame->Release();
 								colorFrame = nullptr;
 							}
@@ -1247,46 +1377,6 @@ void Device::start()
 
 						if ( frame.getTimeStamp() > mFrameDepth.getTimeStamp() ) {
 							mFrameDepth			= frame;
-							process.mNewData	= true;
-						}
-					}
-				}
-			};
-			break;
-		case FrameType_Face2d:
-			process.mThreadCallback = [ & ]()
-			{
-				while ( process.mRunning ) {
-					if ( process.mNewData || mKinect == KCB_INVALID_HANDLE ) {
-						std::this_thread::yield();
-						continue;
-					}
-
-					if ( mEventHandlerFace2d != nullptr ) {
-						Face2dFrame frame;
-
-						if ( frame.getTimeStamp() > mFrameFace2d.getTimeStamp() ) {
-							mFrameFace2d		= frame;
-							process.mNewData	= true;
-						}
-					}
-				}
-			};
-			break;
-		case FrameType_Face3d:
-			process.mThreadCallback = [ & ]()
-			{
-				while ( process.mRunning ) {
-					if ( process.mNewData || mKinect == KCB_INVALID_HANDLE ) {
-						std::this_thread::yield();
-						continue;
-					}
-
-					if ( mEventHandlerFace3d != nullptr ) {
-						Face3dFrame frame;
-
-						if ( frame.getTimeStamp() > mFrameFace3d.getTimeStamp() ) {
-							mFrameFace3d		= frame;
 							process.mNewData	= true;
 						}
 					}
@@ -1348,7 +1438,7 @@ void Device::start()
 					}
 
 					if ( mEventHandlerInfraredLongExposure != nullptr && KCBIsFrameReady( mKinect, FrameSourceTypes_LongExposureInfrared ) ) {
-						InfraredLongExposureFrame frame;
+						InfraredFrame frame;
 						KCBFrameDescription frameDescription;
 						Vec2i sz			= Vec2i::zero();
 						int64_t timeStamp	= 0L;
@@ -1387,7 +1477,6 @@ void Device::start()
 		}
 		process.start();
 	}
-	
 }
 
 void Device::stop()
@@ -1442,18 +1531,6 @@ void Device::update()
 				process.mNewData = false;
 			}
 			break;
-		case FrameType_Face2d:
-			if ( mEventHandlerFace2d != nullptr && process.mNewData ) {
-				mEventHandlerFace2d( mFrameFace2d );
-				process.mNewData = false;
-			}
-			break;
-		case FrameType_Face3d:
-			if ( mEventHandlerFace3d != nullptr && process.mNewData ) {
-				mEventHandlerFace3d( mFrameFace3d );
-				process.mNewData = false;
-			}
-			break;
 		case FrameType_Infrared:
 			if ( mEventHandlerInfrared != nullptr && process.mNewData ) {
 				mEventHandlerInfrared( mFrameInfrared );
@@ -1480,7 +1557,7 @@ void Device::update()
 					IBodyFrameSource* bodyFrameSource = nullptr;
 					hr = mSensor->get_BodyFrameSource( &bodyFrameSource );
 					if ( SUCCEEDED( hr ) && bodyFrameSource != nullptr ) {
-						bodyFrameSource->OpenReader( &mBodyFrameReader );
+						//bodyFrameSource->OpenReader( &mBodyFrameReader );
 					}
 				}
 			}
