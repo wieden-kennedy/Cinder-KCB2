@@ -134,7 +134,7 @@ void BodyApp::draw()
 
 void BodyApp::prepareSettings( Settings* settings )
 {
-	settings->prepareWindow( Window::Format().size( 1280, 720 ).title( "Body App" ) );
+	settings->prepareWindow( Window::Format().size( 1024, 768 ).title( "Body App" ) );
 	settings->setFrameRate( 60.0f );
 }
 

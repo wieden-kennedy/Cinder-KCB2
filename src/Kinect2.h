@@ -167,20 +167,20 @@ protected:
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-class Face
+class Face2d
 {
 public:
-	Face();
+	Face2d();
 protected:
 	friend class												Device;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-class FaceHighDefinition
+class Face3d
 {
 public:
-	FaceHighDefinition();
+	Face3d();
 protected:
 	friend class												Device;
 };
@@ -304,26 +304,26 @@ protected:
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-class FaceFrame : public Frame
+class Face2dFrame : public Frame
 {
 public:
-	FaceFrame();
-	const std::vector<Face>&									getFaces() const;
+	Face2dFrame();
+	const std::vector<Face2d>&									getFaces() const;
 protected:
-	std::vector<Face>											mFaces;
+	std::vector<Face2d>											mFaces;
 
 	friend class												Device;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-class FaceHighDefinitionFrame : public Frame
+class Face3dFrame : public Frame
 {
 public:
-	FaceHighDefinitionFrame();
-	const std::vector<FaceHighDefinition>&						getFaces() const;
+	Face3dFrame();
+	const std::vector<Face3d>&									getFaces() const;
 protected:
-	std::vector<FaceHighDefinition>								mFaces;
+	std::vector<Face3d>											mFaces;
 
 	friend class												Device;
 };
@@ -396,15 +396,15 @@ public:
 	}
 
 	template<typename T, typename Y>
-	inline void													connectFaceEventHandler( T eventHandler, Y* obj )
+	inline void													connectFace2dEventHandler( T eventHandler, Y* obj )
 	{
-		connectFaceEventHandler( std::bind( eventHandler, obj, std::placeholders::_1 ) );
+		connectFace2dEventHandler( std::bind( eventHandler, obj, std::placeholders::_1 ) );
 	}
 	
 	template<typename T, typename Y>
-	inline void													connectFaceHighDefinitionEventHandler( T eventHandler, Y* obj )
+	inline void													connectFace3dEventHandler( T eventHandler, Y* obj )
 	{
-		connectFaceHighDefinitionEventHandler( std::bind( eventHandler, obj, std::placeholders::_1 ) );
+		connectFace3dEventHandler( std::bind( eventHandler, obj, std::placeholders::_1 ) );
 	}
 
 	template<typename T, typename Y>
@@ -424,8 +424,8 @@ public:
 	void														connectBodyIndexEventHandler( const std::function<void ( const BodyIndexFrame& )>& eventHandler );
 	void														connectColorEventHandler( const std::function<void ( const ColorFrame& )>& eventHandler );
 	void														connectDepthEventHandler( const std::function<void ( const DepthFrame& )>& eventHandler );
-	void														connectFaceEventHandler( const std::function<void ( const FaceFrame& )>& eventHandler );
-	void														connectFaceHighDefinitionEventHandler( const std::function<void ( const FaceHighDefinitionFrame& )>& eventHandler );
+	void														connectFace2dEventHandler( const std::function<void ( const Face2dFrame& )>& eventHandler );
+	void														connectFace3dEventHandler( const std::function<void ( const Face3dFrame& )>& eventHandler );
 	void														connectInfraredEventHandler( const std::function<void ( const InfraredFrame& )>& eventHandler );
 	void														connectInfraredLongExposureEventHandler( const std::function<void ( const InfraredLongExposureFrame& )>& eventHandler );
 
@@ -434,8 +434,8 @@ public:
 	void														disconnectBodyIndexEventHandler();
 	void														disconnectColorEventHandler();
 	void														disconnectDepthEventHandler();
-	void														disconnectFaceEventHandler();
-	void														disconnectFaceHighDefinitionEventHandler();
+	void														disconnectFace2dEventHandler();
+	void														disconnectFace3dEventHandler();
 	void														disconnectInfraredEventHandler();
 	void														disconnectInfraredLongExposureEventHandler();
 
@@ -457,8 +457,8 @@ protected:
 		FrameType_BodyIndex, 
 		FrameType_Color, 
 		FrameType_Depth, 
-		FrameType_Face, 
-		FrameType_FaceHighDefinition, 
+		FrameType_Face2d, 
+		FrameType_Face3d, 
 		FrameType_Infrared, 
 		FrameType_InfraredLongExposure
 	} typedef FrameType;
@@ -476,8 +476,8 @@ protected:
 	std::function<void ( const BodyIndexFrame& )>				mEventHandlerBodyIndex;
 	std::function<void ( const ColorFrame& )>					mEventHandlerColor;
 	std::function<void ( const DepthFrame& )>					mEventHandlerDepth;
-	std::function<void ( const FaceFrame& )>					mEventHandlerFace;
-	std::function<void ( const FaceHighDefinitionFrame& )>		mEventHandlerFaceHighDefinition;
+	std::function<void ( const Face2dFrame& )>					mEventHandlerFace2d;
+	std::function<void ( const Face3dFrame& )>					mEventHandlerFace3d;
 	std::function<void ( const InfraredFrame& )>				mEventHandlerInfrared;
 	std::function<void ( const InfraredLongExposureFrame& )>	mEventHandlerInfraredLongExposure;
 
@@ -486,15 +486,17 @@ protected:
 	BodyIndexFrame												mFrameBodyIndex;
 	ColorFrame													mFrameColor;
 	DepthFrame													mFrameDepth;
-	FaceFrame													mFrameFace;
-	FaceHighDefinitionFrame										mFrameFaceHighDefinition;
+	Face2dFrame													mFrameFace2d;
+	Face3dFrame													mFrameFace3d;
 	InfraredFrame												mFrameInfrared;
 	InfraredLongExposureFrame									mFrameInfraredLongExposure;
 	
 	// TODO use KCB equivalents when they become available
 	IBodyFrameReader*											mBodyFrameReader;
 	IFaceFrameReader*											mFaceFrameReader;
+	IFaceFrameSource*											mFaceFrameSource;
 	IHighDefinitionFaceFrameReader*								mHighDefinitionFaceFrameReader;
+	IHighDefinitionFaceFrameSource*								mHighDefinitionFaceFrameSource;
 	IKinectSensor*												mSensor;
 public:
 

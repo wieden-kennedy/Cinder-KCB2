@@ -436,13 +436,13 @@ bool Body::isTracked() const
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-Face::Face()
+Face2d::Face2d()
 {
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-FaceHighDefinition::FaceHighDefinition()
+Face3d::Face3d()
 {
 }
 
@@ -576,24 +576,24 @@ const vector<Body>& BodyFrame::getBodies() const
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-FaceFrame::FaceFrame()
+Face2dFrame::Face2dFrame()
 : Frame()
 {
 }
 
-const vector<Face>& FaceFrame::getFaces() const
+const vector<Face2d>& Face2dFrame::getFaces() const
 {
 	return mFaces;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-FaceHighDefinitionFrame::FaceHighDefinitionFrame()
+Face3dFrame::Face3dFrame()
 : Frame()
 {
 }
 
-const vector<FaceHighDefinition>& FaceHighDefinitionFrame::getFaces() const
+const vector<Face3d>& Face3dFrame::getFaces() const
 {
 	return mFaces;
 }
@@ -638,11 +638,13 @@ DeviceRef Device::create()
 }
 
 Device::Device()
-	: mEventHandlerAudio( nullptr ), mEventHandlerBody( nullptr ), 
-	mEventHandlerBodyIndex( nullptr ), mEventHandlerColor( nullptr ), 
-	mEventHandlerDepth( nullptr ), mEventHandlerFace( nullptr ), 
+	: mBodyFrameReader( nullptr ), mEventHandlerAudio( nullptr ), 
+	mEventHandlerBody( nullptr ), mEventHandlerBodyIndex( nullptr ), 
+	mEventHandlerColor( nullptr ), mEventHandlerDepth( nullptr ), 
+	mEventHandlerFace2d( nullptr ), mEventHandlerFace3d( nullptr ), 
 	mEventHandlerInfrared( nullptr ), mEventHandlerInfraredLongExposure( nullptr ), 
-	mFaceFrameReader( nullptr ), mHighDefinitionFaceFrameReader( nullptr ), 
+	mFaceFrameReader( nullptr ), mFaceFrameSource( nullptr ), 
+	mHighDefinitionFaceFrameReader( nullptr ), mHighDefinitionFaceFrameSource( nullptr ), 
 	mKinect( KCB_INVALID_HANDLE ), mSensor( nullptr )
 {
 	App::get()->getSignalUpdate().connect( bind( &Device::update, this ) );
@@ -678,14 +680,14 @@ void Device::connectDepthEventHandler( const function<void ( const DepthFrame& )
 	mEventHandlerDepth = eventHandler;
 }
 
-void Device::connectFaceEventHandler( const function<void ( const FaceFrame& )>& eventHandler )
+void Device::connectFace2dEventHandler( const function<void ( const Face2dFrame& )>& eventHandler )
 {
-	mEventHandlerFace = eventHandler;
+	mEventHandlerFace2d = eventHandler;
 }
 
-void Device::connectFaceHighDefinitionEventHandler( const function<void ( const FaceHighDefinitionFrame& )>& eventHandler )
+void Device::connectFace3dEventHandler( const function<void ( const Face3dFrame& )>& eventHandler )
 {
-	mEventHandlerFaceHighDefinition = eventHandler;
+	mEventHandlerFace3d = eventHandler;
 }
 
 void Device::connectInfraredEventHandler( const function<void ( const InfraredFrame& )>& eventHandler )
@@ -723,14 +725,14 @@ void Device::disconnectDepthEventHandler()
 	mEventHandlerDepth = nullptr;
 }
 
-void Device::disconnectFaceEventHandler()
+void Device::disconnectFace2dEventHandler()
 {
-	mEventHandlerFace = nullptr;
+	mEventHandlerFace2d = nullptr;
 }
 
-void Device::disconnectFaceHighDefinitionEventHandler()
+void Device::disconnectFace3dEventHandler()
 {
-	mEventHandlerFaceHighDefinition = nullptr;
+	mEventHandlerFace3d = nullptr;
 }
 
 void Device::disconnectInfraredEventHandler()
@@ -1251,7 +1253,7 @@ void Device::start()
 				}
 			};
 			break;
-		case FrameType_Face:
+		case FrameType_Face2d:
 			process.mThreadCallback = [ & ]()
 			{
 				while ( process.mRunning ) {
@@ -1260,18 +1262,18 @@ void Device::start()
 						continue;
 					}
 
-					if ( mEventHandlerFace != nullptr ) {
-						FaceFrame frame;
+					if ( mEventHandlerFace2d != nullptr ) {
+						Face2dFrame frame;
 
-						if ( frame.getTimeStamp() > mFrameFace.getTimeStamp() ) {
-							mFrameFace			= frame;
+						if ( frame.getTimeStamp() > mFrameFace2d.getTimeStamp() ) {
+							mFrameFace2d		= frame;
 							process.mNewData	= true;
 						}
 					}
 				}
 			};
 			break;
-		case FrameType_FaceHighDefinition:
+		case FrameType_Face3d:
 			process.mThreadCallback = [ & ]()
 			{
 				while ( process.mRunning ) {
@@ -1280,12 +1282,12 @@ void Device::start()
 						continue;
 					}
 
-					if ( mEventHandlerFaceHighDefinition != nullptr ) {
-						FaceHighDefinitionFrame frame;
+					if ( mEventHandlerFace3d != nullptr ) {
+						Face3dFrame frame;
 
-						if ( frame.getTimeStamp() > mFrameFaceHighDefinition.getTimeStamp() ) {
-							mFrameFaceHighDefinition	= frame;
-							process.mNewData		= true;
+						if ( frame.getTimeStamp() > mFrameFace3d.getTimeStamp() ) {
+							mFrameFace3d		= frame;
+							process.mNewData	= true;
 						}
 					}
 				}
@@ -1440,15 +1442,15 @@ void Device::update()
 				process.mNewData = false;
 			}
 			break;
-		case FrameType_Face:
-			if ( mEventHandlerFace != nullptr && process.mNewData ) {
-				mEventHandlerFace( mFrameFace );
+		case FrameType_Face2d:
+			if ( mEventHandlerFace2d != nullptr && process.mNewData ) {
+				mEventHandlerFace2d( mFrameFace2d );
 				process.mNewData = false;
 			}
 			break;
-		case FrameType_FaceHighDefinition:
-			if ( mEventHandlerFaceHighDefinition != nullptr && process.mNewData ) {
-				mEventHandlerFaceHighDefinition( mFrameFaceHighDefinition );
+		case FrameType_Face3d:
+			if ( mEventHandlerFace3d != nullptr && process.mNewData ) {
+				mEventHandlerFace3d( mFrameFace3d );
 				process.mNewData = false;
 			}
 			break;
@@ -1475,14 +1477,10 @@ void Device::update()
 				uint8_t isOpen = 0;
 				mSensor->get_IsOpen( &isOpen );
 				if ( isOpen ) {
-					IFaceFrameSource* faceFrameSource								= nullptr;
-					IHighDefinitionFaceFrameSource* highDefinitionFaceFrameSource	= nullptr;
-
-					if ( faceFrameSource != nullptr ) {
-						faceFrameSource->OpenReader( &mFaceFrameReader );
-					}
-					if ( highDefinitionFaceFrameSource != nullptr ) {
-						highDefinitionFaceFrameSource->OpenReader( &mHighDefinitionFaceFrameReader );
+					IBodyFrameSource* bodyFrameSource = nullptr;
+					hr = mSensor->get_BodyFrameSource( &bodyFrameSource );
+					if ( SUCCEEDED( hr ) && bodyFrameSource != nullptr ) {
+						bodyFrameSource->OpenReader( &mBodyFrameReader );
 					}
 				}
 			}
