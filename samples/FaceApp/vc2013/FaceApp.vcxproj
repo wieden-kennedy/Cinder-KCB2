@@ -89,17 +89,27 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)bin\</OutDir>
     <TargetName>$(ProjectName)_d</TargetName>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(KINECTSDK20_DIR)\inc;</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(KINECTSDK20_DIR)\lib\$(PlatformTarget);</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)bin\</OutDir>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(KINECTSDK20_DIR)\inc;</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(KINECTSDK20_DIR)\lib\$(PlatformTarget);</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <TargetName>$(ProjectName)_d</TargetName>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(KINECTSDK20_DIR)\inc;</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(KINECTSDK20_DIR)\lib\$(PlatformTarget);</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(KINECTSDK20_DIR)\inc;</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(KINECTSDK20_DIR)\lib\$(PlatformTarget);</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\..\..\..\..\include;..\..\..\..\..\boost;..\..\..\lib;..\..\..\src;$(KINECTSDK20_DIR)\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\..\include;..\..\..\..\..\boost;..\..\..\lib;..\..\..\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -111,7 +121,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>cinder-$(PlatformToolset)_d.lib;KCBv2.lib;kinect20.lib;Kinect20.Face.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\..\..\..\lib\msw\$(PlatformTarget);$(KINECTSDK20_DIR)\lib\$(PlatformTarget);..\..\..\lib\$(PlatformTarget)\$(Configuration)\</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\..\..\..\lib\msw\$(PlatformTarget);..\..\..\lib\$(PlatformTarget)\$(Configuration)\</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
@@ -121,13 +131,16 @@
       <IgnoreSpecificDefaultLibraries>LIBCMT</IgnoreSpecificDefaultLibraries>
     </Link>
     <PreBuildEvent>
-      <Command>xcopy /e /i /y "$(SolutionDir)..\..\..\lib\$(PlatformTarget)\$(Configuration)\*.dll" "$(SolutionDir)bin\"</Command>
+      <Command>xcopy /e /i /y "$(SolutionDir)..\..\..\lib\$(PlatformTarget)\$(Configuration)\*.dll" "$(SolutionDir)bin\"
+xcopy /e /i /y "$(KINECTSDK20_DIR)Redist\Face\$(PlatformTarget)\Kinect20.Face.dll" "$(SolutionDir)bin\"
+xcopy /e /i /y "$(KINECTSDK20_DIR)Redist\Face\$(PlatformTarget)\NuiDatabase" "$(SolutionDir)bin\"
+</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\..\..\..\..\include;..\..\..\..\..\boost;..\..\..\lib;..\..\..\src;$(KINECTSDK20_DIR)\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\..\include;..\..\..\..\..\boost;..\..\..\lib;..\..\..\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -138,7 +151,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>cinder-$(PlatformToolset)_d.lib;KCBv2.lib;kinect20.lib;Kinect20.Face.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\..\..\..\lib\msw\$(PlatformTarget);$(KINECTSDK20_DIR)\lib\$(PlatformTarget);..\..\..\lib\$(PlatformTarget)\$(Configuration)\</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\..\..\..\lib\msw\$(PlatformTarget);..\..\..\lib\$(PlatformTarget)\$(Configuration)\</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
@@ -147,12 +160,15 @@
       <IgnoreSpecificDefaultLibraries>LIBCMT</IgnoreSpecificDefaultLibraries>
     </Link>
     <PreBuildEvent>
-      <Command>xcopy /e /i /y "$(SolutionDir)..\..\..\lib\$(PlatformTarget)\$(Configuration)\*.dll" "$(SolutionDir)bin\"</Command>
+      <Command>xcopy /e /i /y "$(SolutionDir)..\..\..\lib\$(PlatformTarget)\$(Configuration)\*.dll" "$(SolutionDir)bin\"
+xcopy /e /i /y "$(KINECTSDK20_DIR)Redist\Face\$(PlatformTarget)\Kinect20.Face.dll" "$(SolutionDir)bin\"
+xcopy /e /i /y "$(KINECTSDK20_DIR)Redist\Face\$(PlatformTarget)\NuiDatabase" "$(SolutionDir)bin\"
+</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\..\..\..\..\include;..\..\..\..\..\boost;..\..\..\lib;..\..\..\src;$(KINECTSDK20_DIR)\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\..\include;..\..\..\..\..\boost;..\..\..\lib;..\..\..\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PrecompiledHeader>
@@ -165,7 +181,7 @@
     </ProjectReference>
     <Link>
       <AdditionalDependencies>cinder-$(PlatformToolset).lib;KCBv2.lib;kinect20.lib;Kinect20.Face.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\..\..\..\lib\msw\$(PlatformTarget);$(KINECTSDK20_DIR)\lib\$(PlatformTarget);..\..\..\lib\$(PlatformTarget)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\..\..\..\lib\msw\$(PlatformTarget);..\..\..\lib\$(PlatformTarget)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <GenerateMapFile>true</GenerateMapFile>
       <SubSystem>Windows</SubSystem>
@@ -178,12 +194,14 @@
       <TargetMachine>MachineX86</TargetMachine>
     </Link>
     <PreBuildEvent>
-      <Command>xcopy /e /i /y "$(SolutionDir)..\..\..\lib\$(PlatformTarget)\*.dll" "$(SolutionDir)bin\"</Command>
+      <Command>xcopy /e /i /y "$(SolutionDir)..\..\..\lib\$(PlatformTarget)\*.dll" "$(SolutionDir)bin\"
+xcopy /e /i /y "$(KINECTSDK20_DIR)Redist\Face\$(PlatformTarget)\Kinect20.Face.dll" "$(SolutionDir)bin\"
+xcopy /e /i /y "$(KINECTSDK20_DIR)Redist\Face\$(PlatformTarget)\NuiDatabase" "$(SolutionDir)bin\"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\..\..\..\..\include;..\..\..\..\..\boost;..\..\..\lib;..\..\..\src;$(KINECTSDK20_DIR)\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\..\include;..\..\..\..\..\boost;..\..\..\lib;..\..\..\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PrecompiledHeader>
@@ -196,7 +214,7 @@
     </ProjectReference>
     <Link>
       <AdditionalDependencies>cinder-$(PlatformToolset).lib;KCBv2.lib;kinect20.lib;Kinect20.Face.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\..\..\..\lib\msw\$(PlatformTarget);$(KINECTSDK20_DIR)\lib\$(PlatformTarget);..\..\..\lib\$(PlatformTarget)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\..\..\..\lib\msw\$(PlatformTarget);..\..\..\lib\$(PlatformTarget)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <GenerateMapFile>true</GenerateMapFile>
       <SubSystem>Windows</SubSystem>
@@ -208,7 +226,9 @@
       </DataExecutionPrevention>
     </Link>
     <PreBuildEvent>
-      <Command>xcopy /e /i /y "$(SolutionDir)..\..\..\lib\$(PlatformTarget)\*.dll" "$(SolutionDir)bin\"</Command>
+      <Command>xcopy /e /i /y "$(SolutionDir)..\..\..\lib\$(PlatformTarget)\*.dll" "$(SolutionDir)bin\"
+xcopy /e /i /y "$(KINECTSDK20_DIR)Redist\Face\$(PlatformTarget)\Kinect20.Face.dll" "$(SolutionDir)bin\"
+xcopy /e /i /y "$(KINECTSDK20_DIR)Redist\Face\$(PlatformTarget)\NuiDatabase" "$(SolutionDir)bin\"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

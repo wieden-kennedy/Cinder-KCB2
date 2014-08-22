@@ -46,6 +46,19 @@ using namespace ci;
 using namespace app;
 using namespace std;
 
+static const unsigned long kFaceFrameFeatures = 
+	FaceFrameFeatures::FaceFrameFeatures_BoundingBoxInColorSpace	| 
+	FaceFrameFeatures::FaceFrameFeatures_PointsInColorSpace			|
+	FaceFrameFeatures::FaceFrameFeatures_RotationOrientation		| 
+	FaceFrameFeatures::FaceFrameFeatures_Happy						| 
+	FaceFrameFeatures::FaceFrameFeatures_RightEyeClosed				| 
+	FaceFrameFeatures::FaceFrameFeatures_LeftEyeClosed				| 
+	FaceFrameFeatures::FaceFrameFeatures_MouthOpen					| 
+	FaceFrameFeatures::FaceFrameFeatures_MouthMoved					| 
+	FaceFrameFeatures::FaceFrameFeatures_LookingAway				| 
+	FaceFrameFeatures::FaceFrameFeatures_Glasses					| 
+	FaceFrameFeatures::FaceFrameFeatures_FaceEngagement;
+
 Channel8u channel16To8( const Channel16u& channel, uint8_t bytes )
 {
 	Channel8u channel8;
@@ -268,7 +281,20 @@ string wcharToString( wchar_t* v )
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
+Body::IFace::IFace()
+: mTracked( false )
+{
+}
+
+bool Body::IFace::isTracked() const
+{
+	return mTracked;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
 Body::Face2d::Face2d()
+: IFace()
 {
 }
 
@@ -300,6 +326,7 @@ const Quatf& Body::Face2d::getRotation() const
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 Body::Face3d::Face3d()
+: IFace()
 {
 }
 
@@ -434,6 +461,16 @@ const map<Appearance, DetectionResult>& Body::getAppearances() const
 const map<Expression, DetectionResult>& Body::getExpressions() const
 {
 	return mExpressions;
+}
+
+const Body::Face2d& Body::getFace2d() const
+{
+	return mFace2d;
+}
+
+const Body::Face3d& Body::getFace3d() const
+{
+	return mFace3d;
 }
 
 const Body::Hand& Body::getHandLeft() const
@@ -650,6 +687,7 @@ DeviceRef Device::create()
 
 Device::Device()
 	: mEnabledFaceTracking2d( false ), mEnabledFaceTracking3d( false ), 
+	mEnabledHandTracking( false ), mEnabledJointTracking( true ), 
 	mEventHandlerAudio( nullptr ), mEventHandlerBody( nullptr ), 
 	mEventHandlerBodyIndex( nullptr ), mEventHandlerColor( nullptr ), 
 	mEventHandlerDepth( nullptr ), mEventHandlerInfrared( nullptr ), 
@@ -687,6 +725,10 @@ Device::~Device()
 			mFaceFrameReader3d[ i ]->Release();
 			mFaceFrameReader3d[ i ] = nullptr;
 		}
+	}
+	if ( mSensor != nullptr ) {
+		mSensor->Release();
+		mSensor = nullptr;
 	}
 }
 
@@ -770,6 +812,16 @@ void Device::enableFaceTracking3d( bool enable )
 	mEnabledFaceTracking3d = enable;
 }
 
+void Device::enableHandTracking( bool enable )
+{
+	mEnabledHandTracking = enable;
+}
+
+void Device::enableJointTracking( bool enable )
+{
+	mEnabledJointTracking = enable;
+}
+
 bool Device::isFaceTrackingEnabled2d() const
 {
 	return mEnabledFaceTracking2d;
@@ -778,6 +830,16 @@ bool Device::isFaceTrackingEnabled2d() const
 bool Device::isFaceTrackingEnabled3d() const
 {
 	return mEnabledFaceTracking3d;
+}
+
+bool Device::isHandTrackingEnabled() const
+{
+	return mEnabledHandTracking;
+}
+
+bool Device::isJointTrackingEnabled() const
+{
+	return mEnabledJointTracking;
 }
 
 Vec2i Device::mapCameraToColor( const Vec3f& v ) const
@@ -921,7 +983,7 @@ vector<Vec2i> Device::mapDepthToColor( const vector<Vec2i>& v, const Channel16u&
 void Device::start()
 {
 	long hr = S_OK;
-	
+
 	//IKinectSensorCollection* sensorCollection = nullptr;
 	//hr = GetKinectSensorCollection( &sensorCollection );
 	//if ( FAILED( hr ) || sensorCollection == 0 ) {
@@ -985,18 +1047,31 @@ void Device::start()
 			process.mThreadCallback = [ & ]()
 			{
 				while ( process.mRunning ) {
-					if ( process.mNewData || mKinect == KCB_INVALID_HANDLE ) {
+					if ( process.mNewData ) {
 						std::this_thread::yield();
 						continue;
 					}
 
-					if ( mEventHandlerBody != nullptr && KCBIsFrameReady(mKinect, FrameSourceTypes_Body ) ) {
+					if ( mEventHandlerBody != nullptr && KCBIsFrameReady( mKinect, FrameSourceTypes_Body ) ) {
 						BodyFrame frame;
 						int64_t timeStamp					= 0L;
 						IBody* kinectBodies[ BODY_COUNT ]	= { 0 };
-		
+
 						long hr = KCBGetBodyData( mKinect, BODY_COUNT, kinectBodies, &timeStamp );
 						if ( SUCCEEDED( hr ) ) {
+
+							// Open native sensor for face tracking
+							uint8_t sensorIsOpen = 0;
+							if ( mSensor != nullptr ) {
+								long hr = mSensor->get_IsOpen( &sensorIsOpen );
+								if ( SUCCEEDED( hr ) && sensorIsOpen == 0 ) {
+									hr = mSensor->Open();
+									if ( SUCCEEDED( hr ) ) {
+										long hr = mSensor->get_IsOpen( &sensorIsOpen );
+									}
+								}
+							}
+
 							for ( uint8_t i = 0; i < 6; ++i ) {
 								IBody* kinectBody = kinectBodies[ i ];
 								if ( kinectBody != nullptr ) {
@@ -1007,107 +1082,105 @@ void Device::start()
 									if ( SUCCEEDED( hr ) && isTracked ) {
 										body.mTracked = true;
 
-										Joint joints[ JointType_Count ];
-										kinectBody->GetJoints( JointType_Count, joints );
+										if ( mEnabledJointTracking ) {
+											Joint joints[ JointType_Count ];
+											kinectBody->GetJoints( JointType_Count, joints );
 
-										JointOrientation jointOrientations[ JointType_Count ];
-										kinectBody->GetJointOrientations( JointType_Count, jointOrientations );
+											JointOrientation jointOrientations[ JointType_Count ];
+											kinectBody->GetJointOrientations( JointType_Count, jointOrientations );
 
-										for ( int32_t j = 0; j < JointType_Count; ++j ) {
-											JointType parentJoint = (JointType)j;
-											switch ( (JointType)j ) {
-											case JointType::JointType_AnkleLeft:
-												parentJoint = JointType_KneeLeft;
-												break;
-											case JointType::JointType_AnkleRight:
-												parentJoint = JointType_KneeRight;
-												break;
-											case JointType::JointType_ElbowLeft:
-												parentJoint = JointType_ShoulderLeft;
-												break;
-											case JointType::JointType_ElbowRight:
-												parentJoint = JointType_ShoulderRight;
-												break;
-											case JointType::JointType_FootLeft:
-												parentJoint = JointType_AnkleLeft;
-												break;
-											case JointType::JointType_FootRight:
-												parentJoint = JointType_AnkleRight;
-												break;
-											case JointType::JointType_HandLeft:
-												parentJoint = JointType_WristLeft;
-												break;
-											case JointType::JointType_HandRight:
-												parentJoint = JointType_WristRight;
-												break;
-											case JointType::JointType_HandTipLeft:
-												parentJoint = JointType_HandLeft;
-												break;
-											case JointType::JointType_HandTipRight:
-												parentJoint = JointType_HandRight;
-												break;
-											case JointType::JointType_Head:
-												parentJoint = JointType_Neck;
-												break;
-											case JointType::JointType_HipLeft:
-												parentJoint = JointType_SpineBase;
-												break;
-											case JointType::JointType_HipRight:
-												parentJoint = JointType_SpineBase;
-												break;
-											case JointType::JointType_KneeLeft:
-												parentJoint = JointType_HipLeft;
-												break;
-											case JointType::JointType_KneeRight:
-												parentJoint = JointType_HipRight;
-												break;
-											case JointType::JointType_Neck:
-												parentJoint = JointType_SpineShoulder;
-												break;
-											case JointType::JointType_ShoulderLeft:
-												parentJoint = JointType_SpineShoulder;
-												break;
-											case JointType::JointType_ShoulderRight:
-												parentJoint = JointType_SpineShoulder;
-												break;
-											case JointType::JointType_SpineBase:
-												parentJoint = JointType_SpineBase;
-												break;
-											case JointType::JointType_SpineMid:
-												parentJoint = JointType_SpineBase;
-												break;
-											case JointType::JointType_SpineShoulder:
-												parentJoint = JointType_SpineMid;
-												break;
-											case JointType::JointType_ThumbLeft:
-												parentJoint = JointType_HandLeft;
-												break;
-											case JointType::JointType_ThumbRight:
-												parentJoint = JointType_HandRight;
-												break;
-											case JointType::JointType_WristLeft:
-												parentJoint = JointType_ElbowLeft;
-												break;
-											case JointType::JointType_WristRight:
-												parentJoint = JointType_ElbowRight;
-												break;
+											for ( int32_t j = 0; j < JointType_Count; ++j ) {
+												JointType parentJoint = (JointType)j;
+												switch ( (JointType)j ) {
+												case JointType::JointType_AnkleLeft:
+													parentJoint = JointType_KneeLeft;
+													break;
+												case JointType::JointType_AnkleRight:
+													parentJoint = JointType_KneeRight;
+													break;
+												case JointType::JointType_ElbowLeft:
+													parentJoint = JointType_ShoulderLeft;
+													break;
+												case JointType::JointType_ElbowRight:
+													parentJoint = JointType_ShoulderRight;
+													break;
+												case JointType::JointType_FootLeft:
+													parentJoint = JointType_AnkleLeft;
+													break;
+												case JointType::JointType_FootRight:
+													parentJoint = JointType_AnkleRight;
+													break;
+												case JointType::JointType_HandLeft:
+													parentJoint = JointType_WristLeft;
+													break;
+												case JointType::JointType_HandRight:
+													parentJoint = JointType_WristRight;
+													break;
+												case JointType::JointType_HandTipLeft:
+													parentJoint = JointType_HandLeft;
+													break;
+												case JointType::JointType_HandTipRight:
+													parentJoint = JointType_HandRight;
+													break;
+												case JointType::JointType_Head:
+													parentJoint = JointType_Neck;
+													break;
+												case JointType::JointType_HipLeft:
+													parentJoint = JointType_SpineBase;
+													break;
+												case JointType::JointType_HipRight:
+													parentJoint = JointType_SpineBase;
+													break;
+												case JointType::JointType_KneeLeft:
+													parentJoint = JointType_HipLeft;
+													break;
+												case JointType::JointType_KneeRight:
+													parentJoint = JointType_HipRight;
+													break;
+												case JointType::JointType_Neck:
+													parentJoint = JointType_SpineShoulder;
+													break;
+												case JointType::JointType_ShoulderLeft:
+													parentJoint = JointType_SpineShoulder;
+													break;
+												case JointType::JointType_ShoulderRight:
+													parentJoint = JointType_SpineShoulder;
+													break;
+												case JointType::JointType_SpineBase:
+													parentJoint = JointType_SpineBase;
+													break;
+												case JointType::JointType_SpineMid:
+													parentJoint = JointType_SpineBase;
+													break;
+												case JointType::JointType_SpineShoulder:
+													parentJoint = JointType_SpineMid;
+													break;
+												case JointType::JointType_ThumbLeft:
+													parentJoint = JointType_HandLeft;
+													break;
+												case JointType::JointType_ThumbRight:
+													parentJoint = JointType_HandRight;
+													break;
+												case JointType::JointType_WristLeft:
+													parentJoint = JointType_ElbowLeft;
+													break;
+												case JointType::JointType_WristRight:
+													parentJoint = JointType_ElbowRight;
+													break;
+												}
+
+												Body::Joint joint( 
+													toVec3f( joints[ j ].Position ), 
+													toQuatf( jointOrientations[ j ].Orientation ), 
+													joints[ j ].TrackingState, 
+													parentJoint
+													);
+												body.mJointMap.insert( pair<JointType, Body::Joint>( static_cast<JointType>( j ), joint ) );
 											}
-
-											Body::Joint joint( 
-												toVec3f( joints[ j ].Position ), 
-												toQuatf( jointOrientations[ j ].Orientation ), 
-												joints[ j ].TrackingState, 
-												parentJoint
-												);
-											body.mJointMap.insert( pair<JointType, Body::Joint>( static_cast<JointType>( j ), joint ) );
 										}
 										
 										PointF lean;
 										kinectBody->get_Engaged( &body.mEngaged );
-										kinectBody->get_HandLeftConfidence( &body.mHands[ 0 ].mConfidence );
-										kinectBody->get_HandLeftState( &body.mHands[ 0 ].mState );
-										kinectBody->get_HandRightConfidence( &body.mHands[ 1 ].mConfidence );
-										kinectBody->get_HandRightState( &body.mHands[ 1 ].mState );
 										kinectBody->get_Lean( &lean );
 										kinectBody->get_LeanTrackingState( &body.mLeanTrackingState );
 										kinectBody->get_TrackingId( &body.mId );
@@ -1116,115 +1189,136 @@ void Device::start()
 										
 										DetectionResult activities[ Activity_Count ];
 										kinectBody->GetActivityDetectionResults( (UINT)Activity_Count, activities );
-										for ( size_t i = 0; i < (size_t)Activity_Count; ++i ) {
-											body.mActivities[ (Activity)i ] = activities[ i ];
+										for ( size_t j = 0; j < (size_t)Activity_Count; ++j ) {
+											body.mActivities[ (Activity)j ] = activities[ j ];
 										}
 
 										DetectionResult appearances[ Appearance_Count ];
 										kinectBody->GetAppearanceDetectionResults( (UINT)Appearance_Count, appearances );
-										for ( size_t i = 0; i < (size_t)Appearance_Count; ++i ) {
-											body.mAppearances[ (Appearance)i ] = appearances[ i ];
+										for ( size_t j = 0; j < (size_t)Appearance_Count; ++j ) {
+											body.mAppearances[ (Appearance)i ] = appearances[ j ];
 										}
 
 										DetectionResult expressions[ Expression_Count ];
 										kinectBody->GetExpressionDetectionResults( (UINT)Expression_Count, expressions );
-										for ( size_t i = 0; i < (size_t)Expression_Count; ++i ) {
-											body.mExpressions[ (Expression)i ] = expressions[ i ];
+										for ( size_t j = 0; j < (size_t)Expression_Count; ++j ) {
+											body.mExpressions[ (Expression)j ] = expressions[ j ];
 										}
 
-										if ( mSensor != nullptr ) {
-											if ( mEnabledFaceTracking2d ) {
-												for ( size_t i = 0; i < BODY_COUNT; ++i ) {
-													if ( mFaceFrameSource2d[ i ] == nullptr ) {
-														static const DWORD faceFrameFeatures = 
-															FaceFrameFeatures::FaceFrameFeatures_BoundingBoxInColorSpace	| 
-															FaceFrameFeatures::FaceFrameFeatures_PointsInColorSpace			|
-															FaceFrameFeatures::FaceFrameFeatures_RotationOrientation		| 
-															FaceFrameFeatures::FaceFrameFeatures_Happy						| 
-															FaceFrameFeatures::FaceFrameFeatures_RightEyeClosed				| 
-															FaceFrameFeatures::FaceFrameFeatures_LeftEyeClosed				| 
-															FaceFrameFeatures::FaceFrameFeatures_MouthOpen					| 
-															FaceFrameFeatures::FaceFrameFeatures_MouthMoved					| 
-															FaceFrameFeatures::FaceFrameFeatures_LookingAway				| 
-															FaceFrameFeatures::FaceFrameFeatures_Glasses					| 
-															FaceFrameFeatures::FaceFrameFeatures_FaceEngagement;
+										if ( mEnabledHandTracking ) {
+											kinectBody->get_HandLeftConfidence( &body.mHands[ 0 ].mConfidence );
+											kinectBody->get_HandLeftState( &body.mHands[ 0 ].mState );
+											kinectBody->get_HandRightConfidence( &body.mHands[ 1 ].mConfidence );
+											kinectBody->get_HandRightState( &body.mHands[ 1 ].mState );
+										}
 
-														hr = CreateFaceFrameSource( mSensor, 0, faceFrameFeatures, &mFaceFrameSource2d[ i ] );
-														if ( SUCCEEDED( hr ) && mFaceFrameSource2d[ i ] != nullptr ) {
-															mFaceFrameSource2d[ i ]->OpenReader( &mFaceFrameReader2d[ i ] );
-														}
-													}
-													if ( mFaceFrameSource2d[ i ] != nullptr && mFaceFrameReader2d[ i ] != nullptr ) {
-														IFaceFrame* faceFrame = nullptr;
-														hr = mFaceFrameReader2d[ i ]->AcquireLatestFrame( &faceFrame );
-														if ( SUCCEEDED( hr ) && faceFrame != nullptr ) {
-															uint8_t isFaceTracked	= false;
-															hr					= faceFrame->get_IsTrackingIdValid( &isFaceTracked );
-															if ( SUCCEEDED( hr ) ) {
-																if ( isFaceTracked ) {
+										if ( mEnabledFaceTracking2d ) {
+											uint8_t trackingIdValid	= 0;
 
-																	IFaceFrameResult* faceFrameResult	= nullptr;
-																	RectI faceRectColor					= { 0 };
-																	RectI faceRectInfrared				= { 0 };
-																	PointF facePointsColor[ FacePointType::FacePointType_Count ];
-																	PointF facePointsInfrared[ FacePointType::FacePointType_Count ];
-																	Vector4 faceRotation;
-																	DetectionResult faceProperties[ FaceProperty::FaceProperty_Count ];
-
-																	hr = faceFrame->get_FaceFrameResult( &faceFrameResult );
-
-																	if ( SUCCEEDED( hr ) && faceFrameResult != nullptr ) {
-																		hr = faceFrameResult->get_FaceBoundingBoxInColorSpace( &faceRectColor );
-
-																		if ( SUCCEEDED( hr ) ) {
-																			hr = faceFrameResult->get_FaceBoundingBoxInInfraredSpace( &faceRectInfrared );
-																		}
-																		if ( SUCCEEDED( hr ) ) {
-																			hr = faceFrameResult->GetFacePointsInColorSpace( FacePointType::FacePointType_Count, facePointsColor );
-																		}
-																		if ( SUCCEEDED( hr ) ) {
-																			hr = faceFrameResult->GetFacePointsInInfraredSpace( FacePointType::FacePointType_Count, facePointsInfrared );
-																		}
-																		if ( SUCCEEDED( hr ) ) {
-																			hr = faceFrameResult->get_FaceRotationQuaternion( &faceRotation );
-																		}
-																		if ( SUCCEEDED( hr ) ) {
-																			hr = faceFrameResult->GetFaceProperties( FaceProperty::FaceProperty_Count, faceProperties );
-																		}
-																		if ( SUCCEEDED( hr ) ) {
-
-																			body.mFace2d.mBoundsColor		= toRectf( faceRectColor );
-																			body.mFace2d.mBoundsInfrared	= toRectf( faceRectInfrared );
-
-																		}
+											// Create face frame source if null, invalid, or if ID has changed
+											bool createSource = sensorIsOpen && mFaceFrameSource2d[ i ] == nullptr;
+											if ( !createSource && mFaceFrameSource2d[ i ] != nullptr ) {
+												uint8_t isActive = 0;
+												hr = mFaceFrameSource2d[ i ]->get_IsActive( &isActive );
+												if ( SUCCEEDED( hr ) ) {
+													if ( isActive > 0 ) {
+														uint8_t trackingIdValid = 0;
+														hr = mFaceFrameSource2d[ i ]->get_IsTrackingIdValid( &trackingIdValid );
+														if ( SUCCEEDED( hr ) ) {
+															if ( trackingIdValid > 0 ) {
+																UINT64 trackingId = 0;
+																hr = mFaceFrameSource2d[ i ]->get_TrackingId( &trackingId );
+																if ( SUCCEEDED( hr ) ) {
+																	if ( body.getId() != trackingId ) {
+																		createSource = true;
 																	}
-
-																	if ( faceFrameResult != nullptr ) {
-																		faceFrameResult->Release();
-																		faceFrameResult = nullptr;
-																	}	
-
 																} else {
-																	mFaceFrameSource2d[ i ]->put_TrackingId( body.getId() );
+																	createSource = true;
 																}
 															}
+														} else {
+															createSource = true;
 														}
 													}
 												}
 											}
 
-											if ( mEnabledFaceTracking3d ) {
-												for ( size_t i = 0; i < BODY_COUNT; ++i ) {
-													if ( mFaceFrameSource3d[ i ] == nullptr ) {
-														hr = CreateHighDefinitionFaceFrameSource( mSensor, &mFaceFrameSource3d[ i ] );
-														if ( SUCCEEDED( hr ) && mFaceFrameSource3d[ i ] != nullptr ) {
-															mFaceFrameSource3d[ i ]->OpenReader( &mFaceFrameReader3d[ i ] );
-														}
-													}
-													if ( mFaceFrameSource3d[ i ] != nullptr && mFaceFrameReader3d[ i ] != nullptr ) {
-
+											if ( createSource ) {
+												hr = CreateFaceFrameSource( mSensor, (UINT64)body.getId(), kFaceFrameFeatures, &mFaceFrameSource2d[ i ] ); // <-- This doesn't work yet
+												if ( SUCCEEDED( hr ) && mFaceFrameSource2d[ i ] != nullptr ) {
+													console() << "It would be super if this line was ever hit" << endl;
+													hr = mFaceFrameSource2d[ i ]->OpenReader( &mFaceFrameReader2d[ i ] );
+													if ( SUCCEEDED( hr ) && mFaceFrameSource2d[ i ] != nullptr ) {
+														console() << "It would be super duper if this line was ever hit" << endl;
 													}
 												}
+											}
+											if ( mFaceFrameSource2d[ i ] != nullptr && mFaceFrameReader2d[ i ] != nullptr ) {
+												IFaceFrame* faceFrame = nullptr;
+												hr = mFaceFrameReader2d[ i ]->AcquireLatestFrame( &faceFrame );
+												if ( SUCCEEDED( hr ) && faceFrame != nullptr ) {
+													hr = faceFrame->get_IsTrackingIdValid( &trackingIdValid );
+													if ( SUCCEEDED( hr ) ) {
+														if ( trackingIdValid ) {
+															IFaceFrameResult* faceFrameResult	= nullptr;
+															RectI faceRectColor					= { 0 };
+															RectI faceRectInfrared				= { 0 };
+															PointF facePointsColor[ FacePointType::FacePointType_Count ];
+															PointF facePointsInfrared[ FacePointType::FacePointType_Count ];
+															Vector4 faceRotation;
+															DetectionResult faceProperties[ FaceProperty::FaceProperty_Count ];
+
+															hr = faceFrame->get_FaceFrameResult( &faceFrameResult );
+
+															if ( SUCCEEDED( hr ) && faceFrameResult != nullptr ) {
+																hr = faceFrameResult->get_FaceBoundingBoxInColorSpace( &faceRectColor );
+																if ( SUCCEEDED( hr ) ) {
+																	hr = faceFrameResult->get_FaceBoundingBoxInInfraredSpace( &faceRectInfrared );
+																}
+																if ( SUCCEEDED( hr ) ) {
+																	hr = faceFrameResult->GetFacePointsInColorSpace( FacePointType_Count, facePointsColor );
+																}
+																if ( SUCCEEDED( hr ) ) {
+																	hr = faceFrameResult->GetFacePointsInInfraredSpace( FacePointType_Count, facePointsInfrared );
+																}
+																if ( SUCCEEDED( hr ) ) {
+																	hr = faceFrameResult->get_FaceRotationQuaternion( &faceRotation );
+																}
+																if ( SUCCEEDED( hr ) ) {
+																	hr = faceFrameResult->GetFaceProperties( FaceProperty_Count, faceProperties );
+																}
+																if ( SUCCEEDED( hr ) ) {
+																	body.mFace2d.mTracked			= true;
+																	body.mFace2d.mBoundsColor		= toRectf( faceRectColor );
+																	body.mFace2d.mBoundsInfrared	= toRectf( faceRectInfrared );
+																	body.mFace2d.mRotation			= toQuatf( faceRotation );
+																	for ( size_t j = 0; j < (size_t)FacePointType_Count; ++j ) {
+																		body.mFace2d.mPointsColor.push_back( toVec2f( facePointsColor[ j ] ) );
+																		body.mFace2d.mPointsInfrared.push_back( toVec2f( facePointsInfrared[ j ] ) );
+																	}
+																}
+															}
+															if ( faceFrameResult != nullptr ) {
+																faceFrameResult->Release();
+																faceFrameResult = nullptr;
+															}
+														}
+													} else {
+														mFaceFrameSource2d[ i ]->put_TrackingId( body.getId() );
+													}
+												}
+											}
+										}
+
+										if ( mEnabledFaceTracking3d ) {
+											if ( mFaceFrameSource3d[ i ] == nullptr || mFaceFrameReader3d[ i ] == nullptr ) {
+												hr = CreateHighDefinitionFaceFrameSource( mSensor, &mFaceFrameSource3d[ i ] );
+												if ( SUCCEEDED( hr ) && mFaceFrameSource3d[ i ] != nullptr ) {
+													hr = mFaceFrameSource3d[ i ]->OpenReader( &mFaceFrameReader3d[ i ] );
+												}
+											}
+											if ( mFaceFrameSource3d[ i ] != nullptr && mFaceFrameReader3d[ i ] != nullptr ) {
+												// TODO populate face 3D
 											}
 										}
 									}
@@ -1546,22 +1640,8 @@ void Device::update()
 		}
 	}
 
-	// Workaround to add face tracking support before it gets into KCB
 	if ( mSensor == nullptr ) {
-		long hr = GetDefaultKinectSensor( &mSensor );
-		if ( SUCCEEDED( hr ) ) {
-			if ( mSensor != nullptr ) {
-				uint8_t isOpen = 0;
-				mSensor->get_IsOpen( &isOpen );
-				if ( isOpen ) {
-					IBodyFrameSource* bodyFrameSource = nullptr;
-					hr = mSensor->get_BodyFrameSource( &bodyFrameSource );
-					if ( SUCCEEDED( hr ) && bodyFrameSource != nullptr ) {
-						//bodyFrameSource->OpenReader( &mBodyFrameReader );
-					}
-				}
-			}
-		}
+		GetDefaultKinectSensor( &mSensor );
 	}
 }
 

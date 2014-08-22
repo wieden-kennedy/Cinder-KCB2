@@ -87,15 +87,9 @@ void FaceApp::draw()
 		gl::disable( GL_TEXTURE_2D );
 		for ( const Kinect2::Body& body : mBodies ) {
 			if ( body.isTracked() ) {
-				for ( const auto& joint : body.getJointMap() ) {
-					if ( joint.second.getTrackingState() == TrackingState_Tracked ) {
-						Vec2f pos( mDevice->mapCameraToDepth( joint.second.getPosition() ) );
-						gl::drawSolidCircle( pos, 5.0f, 32 );
-						Vec2f parent( mDevice->mapCameraToDepth(
-							body.getJointMap().at( joint.second.getParentJoint() ).getPosition()
-							) );
-						gl::drawLine( pos, parent );
-					}
+				const Kinect2::Body::Face2d& face = body.getFace2d();
+				if ( face.isTracked() ) {
+					gl::drawStrokedRect( face.getBoundsInfrared() );
 				}
 			}
 		}
@@ -119,6 +113,7 @@ void FaceApp::setup()
 	mFullScreen	= false;
 
 	mDevice = Kinect2::Device::create();
+	mDevice->enableFaceTracking2d();
 	mDevice->start();
 	mDevice->connectBodyEventHandler( [ & ]( const Kinect2::BodyFrame& frame )
 	{

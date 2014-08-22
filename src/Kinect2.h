@@ -92,7 +92,21 @@ public:
 
 	//////////////////////////////////////////////////////////////////////////////////////////////
 
-	class Face2d
+	class IFace
+	{
+	public:
+		IFace();
+
+		bool										isTracked() const;
+	protected:
+		bool										mTracked;
+
+		friend class								Device;
+	};
+
+	//////////////////////////////////////////////////////////////////////////////////////////////
+
+	class Face2d : public IFace
 	{
 	public:
 		Face2d();
@@ -114,7 +128,7 @@ public:
 
 	//////////////////////////////////////////////////////////////////////////////////////////////
 
-	class Face3d
+	class Face3d : public IFace
 	{
 	public:
 		Face3d();
@@ -358,8 +372,12 @@ public:
 
 	void											enableFaceTracking2d( bool enable = true );
 	void											enableFaceTracking3d( bool enable = true );
+	void											enableHandTracking( bool enable = true );
+	void											enableJointTracking( bool enable = true );
 	bool											isFaceTrackingEnabled2d() const;
 	bool											isFaceTrackingEnabled3d() const;
+	bool											isHandTrackingEnabled() const;
+	bool											isJointTrackingEnabled() const;
 
 	template<typename T, typename Y>
 	inline void										connectAudioEventHandler( T eventHandler, Y* obj )
@@ -468,10 +486,12 @@ protected:
 
 	bool											mEnabledFaceTracking2d;
 	bool											mEnabledFaceTracking3d;
-	IFaceFrameSource*								mFaceFrameSource2d[ BODY_COUNT ];
+	bool											mEnabledHandTracking;
+	bool											mEnabledJointTracking;
 	IFaceFrameReader*								mFaceFrameReader2d[ BODY_COUNT ];
-	IHighDefinitionFaceFrameSource*					mFaceFrameSource3d[ BODY_COUNT ];
+	IFaceFrameSource*								mFaceFrameSource2d[ BODY_COUNT ];
 	IHighDefinitionFaceFrameReader*					mFaceFrameReader3d[ BODY_COUNT ];
+	IHighDefinitionFaceFrameSource*					mFaceFrameSource3d[ BODY_COUNT ];
 public:
 
 	//////////////////////////////////////////////////////////////////////////////////////////////
