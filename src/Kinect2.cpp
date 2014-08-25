@@ -296,6 +296,9 @@ bool Body::IFace::isTracked() const
 Body::Face2d::Face2d()
 : IFace()
 {
+	for ( size_t i = 0; i < (size_t)FaceProperty_Count; ++i ) {
+		mFaceProperties[ (FaceProperty)i ] = DetectionResult_Unknown;
+	}
 }
 
 const Rectf& Body::Face2d::getBoundsColor() const
@@ -306,6 +309,11 @@ const Rectf& Body::Face2d::getBoundsColor() const
 const Rectf& Body::Face2d::getBoundsInfrared() const
 {
 	return mBoundsInfrared;
+}
+
+const map<FaceProperty, DetectionResult>& Body::Face2d::getFaceProperties() const
+{
+	return mFaceProperties;
 }
 
 const vector<Vec2f>& Body::Face2d::getPointsColor() const
@@ -325,9 +333,113 @@ const Quatf& Body::Face2d::getRotation() const
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
+vector<uint32_t>	Body::Face3d::sIndices;
+uint32_t			Body::Face3d::sNumIndices	= 0;
+uint32_t			Body::Face3d::sNumVertices	= 0;
+
 Body::Face3d::Face3d()
-: IFace()
+: IFace(), mColorHair( ColorA8u::hex( 0x00000000 ) ), mColorSkin( ColorA8u::hex( 0x00000000 ) ), 
+mFaceAlignmentQuality( FaceAlignmentQuality_Low ), mHeadPivotPoint( Vec3f::zero() ), 
+mScale( 0.0f )
 {
+	for ( size_t i = 0; i < (size_t)FaceShapeAnimations_Count; ++i ) {
+		mFaceShapeAnimations[ (FaceShapeAnimations)i ] = 0.0f;
+	}
+	for ( size_t i = 0; i < (size_t)FaceShapeDeformations_Count; ++i ) {
+		mFaceShapeDeformations[ (FaceShapeDeformations)i ] = 0.0f;
+	}
+}
+
+TriMesh Body::Face3d::createTriMesh() const
+{
+	TriMesh mesh;
+	if ( sNumIndices > 0	&& 
+		 sNumVertices > 0	&& 
+		 !sIndices.empty()	&& 
+		 !mVertices.empty() ) {
+		mesh.appendIndices( &sIndices[ 0 ], sIndices.size() );
+		mesh.appendVertices( &mVertices[ 0 ], mVertices.size() );
+	}
+	return mesh;
+}
+
+const Rectf& Body::Face3d::getBounds() const
+{
+	return mBounds;
+}
+
+FaceAlignmentQuality Body::Face3d::getFaceAlignmentQuality() const
+{
+	return mFaceAlignmentQuality;
+}
+
+const map<FaceShapeAnimations, float>& Body::Face3d::getFaceShapeAnimations() const
+{
+	return mFaceShapeAnimations;
+}
+
+const map<FaceShapeDeformations, float>& Body::Face3d::getFaceShapeDeformations() const
+{
+	return mFaceShapeDeformations;
+}
+
+const ColorA8u& Body::Face3d::getHairColor() const
+{
+	return mColorHair;
+}
+
+const Vec3f& Body::Face3d::getHeadPivotPoint() const
+{
+	return mHeadPivotPoint;
+}
+
+const vector<uint32_t>& Body::Face3d::getIndices() const
+{
+	if ( sNumIndices > 0 && sIndices.size() != sNumIndices ) {
+		uint32_t* indices = new uint32_t[ sNumIndices ];
+		GetFaceModelTriangles( sNumIndices, indices );
+		for ( size_t i = 0; i < sNumIndices; ++i ) {
+			sIndices.push_back( indices[ i ] );
+		}
+		delete [] indices;
+	}
+	return sIndices;
+}
+
+uint32_t Body::Face3d::getNumIndices() const
+{
+	if ( sNumIndices == 0 ) {
+		GetFaceModelTriangleCount( &sNumIndices );
+	}
+	return sNumIndices;
+}
+
+uint32_t Body::Face3d::getNumVertices() const
+{
+	if ( sNumVertices == 0 ) {
+		GetFaceModelVertexCount( &sNumVertices );
+	}
+	return sNumVertices;
+}
+
+const Quatf& Body::Face3d::getOrientation() const
+{
+	return mOrientation;
+}
+
+float Body::Face3d::getScale() const
+{
+	return mScale;
+}
+
+const ColorA8u& Body::Face3d::getSkinColor() const
+{
+	return mColorSkin;
+}
+
+const vector<Vec3f>& Body::Face3d::getVertices() const
+{
+	return mVertices;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
@@ -1052,7 +1164,7 @@ void Device::start()
 						continue;
 					}
 
-					if ( mEventHandlerBody != nullptr && KCBIsFrameReady( mKinect, FrameSourceTypes_Body ) ) {
+					if ( mEventHandlerBody != nullptr && KCBIsFrameReady( mKinect, FrameSourceTypes_Body ) ) {		
 						BodyFrame frame;
 						int64_t timeStamp					= 0L;
 						IBody* kinectBodies[ BODY_COUNT ]	= { 0 };
@@ -1213,88 +1325,68 @@ void Device::start()
 										}
 
 										if ( mEnabledFaceTracking2d ) {
-											uint8_t trackingIdValid	= 0;
-
-											// Create face frame source if null, invalid, or if ID has changed
-											bool createSource = sensorIsOpen && mFaceFrameSource2d[ i ] == nullptr;
-											if ( !createSource && mFaceFrameSource2d[ i ] != nullptr ) {
-												uint8_t isActive = 0;
-												hr = mFaceFrameSource2d[ i ]->get_IsActive( &isActive );
-												if ( SUCCEEDED( hr ) ) {
-													if ( isActive > 0 ) {
-														uint8_t trackingIdValid = 0;
-														hr = mFaceFrameSource2d[ i ]->get_IsTrackingIdValid( &trackingIdValid );
-														if ( SUCCEEDED( hr ) ) {
-															if ( trackingIdValid > 0 ) {
-																UINT64 trackingId = 0;
-																hr = mFaceFrameSource2d[ i ]->get_TrackingId( &trackingId );
-																if ( SUCCEEDED( hr ) ) {
-																	if ( body.getId() != trackingId ) {
-																		createSource = true;
-																	}
-																} else {
-																	createSource = true;
-																}
-															}
-														} else {
-															createSource = true;
-														}
-													}
-												}
-											}
-
-											if ( createSource ) {
-												hr = CreateFaceFrameSource( mSensor, (UINT64)body.getId(), kFaceFrameFeatures, &mFaceFrameSource2d[ i ] ); // <-- This doesn't work yet
+											if ( sensorIsOpen && mFaceFrameSource2d[ i ] == nullptr ) {
+												hr = CreateFaceFrameSource( mSensor, 0, kFaceFrameFeatures, &mFaceFrameSource2d[ i ] );
 												if ( SUCCEEDED( hr ) && mFaceFrameSource2d[ i ] != nullptr ) {
-													console() << "It would be super if this line was ever hit" << endl;
 													hr = mFaceFrameSource2d[ i ]->OpenReader( &mFaceFrameReader2d[ i ] );
 													if ( SUCCEEDED( hr ) && mFaceFrameSource2d[ i ] != nullptr ) {
-														console() << "It would be super duper if this line was ever hit" << endl;
 													}
 												}
 											}
+
 											if ( mFaceFrameSource2d[ i ] != nullptr && mFaceFrameReader2d[ i ] != nullptr ) {
-												IFaceFrame* faceFrame = nullptr;
-												hr = mFaceFrameReader2d[ i ]->AcquireLatestFrame( &faceFrame );
+												IFaceFrame* faceFrame	= nullptr;
+												hr						= mFaceFrameReader2d[ i ]->AcquireLatestFrame( &faceFrame );
 												if ( SUCCEEDED( hr ) && faceFrame != nullptr ) {
-													hr = faceFrame->get_IsTrackingIdValid( &trackingIdValid );
+													uint8_t trackingIdValid	= 0;
+													hr						= faceFrame->get_IsTrackingIdValid( &trackingIdValid );
 													if ( SUCCEEDED( hr ) ) {
 														if ( trackingIdValid ) {
 															IFaceFrameResult* faceFrameResult	= nullptr;
-															RectI faceRectColor					= { 0 };
-															RectI faceRectInfrared				= { 0 };
-															PointF facePointsColor[ FacePointType::FacePointType_Count ];
-															PointF facePointsInfrared[ FacePointType::FacePointType_Count ];
-															Vector4 faceRotation;
-															DetectionResult faceProperties[ FaceProperty::FaceProperty_Count ];
-
-															hr = faceFrame->get_FaceFrameResult( &faceFrameResult );
-
+															hr									= faceFrame->get_FaceFrameResult( &faceFrameResult );
+															
 															if ( SUCCEEDED( hr ) && faceFrameResult != nullptr ) {
+																body.mFace2d.mTracked = true;
+	
+																RectI faceRectColor = { 0 };
 																hr = faceFrameResult->get_FaceBoundingBoxInColorSpace( &faceRectColor );
 																if ( SUCCEEDED( hr ) ) {
-																	hr = faceFrameResult->get_FaceBoundingBoxInInfraredSpace( &faceRectInfrared );
+																	body.mFace2d.mBoundsColor = toRectf( faceRectColor );
 																}
-																if ( SUCCEEDED( hr ) ) {
-																	hr = faceFrameResult->GetFacePointsInColorSpace( FacePointType_Count, facePointsColor );
+
+																RectI faceRectInfrared = { 0 };
+																hr = faceFrameResult->get_FaceBoundingBoxInInfraredSpace( &faceRectInfrared );
+																if ( SUCCEEDED( hr ) ) {	
+																	body.mFace2d.mBoundsInfrared = toRectf( faceRectInfrared );
 																}
+																
+																PointF facePointsColor[ FacePointType::FacePointType_Count ];
+																hr = faceFrameResult->GetFacePointsInColorSpace( FacePointType_Count, facePointsColor );
 																if ( SUCCEEDED( hr ) ) {
-																	hr = faceFrameResult->GetFacePointsInInfraredSpace( FacePointType_Count, facePointsInfrared );
-																}
-																if ( SUCCEEDED( hr ) ) {
-																	hr = faceFrameResult->get_FaceRotationQuaternion( &faceRotation );
-																}
-																if ( SUCCEEDED( hr ) ) {
-																	hr = faceFrameResult->GetFaceProperties( FaceProperty_Count, faceProperties );
-																}
-																if ( SUCCEEDED( hr ) ) {
-																	body.mFace2d.mTracked			= true;
-																	body.mFace2d.mBoundsColor		= toRectf( faceRectColor );
-																	body.mFace2d.mBoundsInfrared	= toRectf( faceRectInfrared );
-																	body.mFace2d.mRotation			= toQuatf( faceRotation );
 																	for ( size_t j = 0; j < (size_t)FacePointType_Count; ++j ) {
 																		body.mFace2d.mPointsColor.push_back( toVec2f( facePointsColor[ j ] ) );
+																	}
+																}
+																
+																PointF facePointsInfrared[ FacePointType::FacePointType_Count ];
+																hr = faceFrameResult->GetFacePointsInInfraredSpace( FacePointType_Count, facePointsInfrared );
+																if ( SUCCEEDED( hr ) ) {
+																	for ( size_t j = 0; j < (size_t)FacePointType_Count; ++j ) {
 																		body.mFace2d.mPointsInfrared.push_back( toVec2f( facePointsInfrared[ j ] ) );
+																	}
+																}
+
+																Vector4 faceRotation;
+																hr = faceFrameResult->get_FaceRotationQuaternion( &faceRotation );
+																if ( SUCCEEDED( hr ) ) {
+																	body.mFace2d.mRotation = toQuatf( faceRotation );
+																}
+
+																DetectionResult faceProperties[ FaceProperty::FaceProperty_Count ];
+																hr = faceFrameResult->GetFaceProperties( FaceProperty_Count, faceProperties );
+																if ( SUCCEEDED( hr ) ) {
+																	for ( size_t j = 0; j < (size_t)FaceProperty_Count; ++j ) {
+																		body.mFace2d.mFaceProperties[ (FaceProperty)j ] = faceProperties[ j ];
 																	}
 																}
 															}
@@ -1311,14 +1403,109 @@ void Device::start()
 										}
 
 										if ( mEnabledFaceTracking3d ) {
-											if ( mFaceFrameSource3d[ i ] == nullptr || mFaceFrameReader3d[ i ] == nullptr ) {
+											if ( sensorIsOpen && mFaceFrameSource3d[ i ] == nullptr ) {
 												hr = CreateHighDefinitionFaceFrameSource( mSensor, &mFaceFrameSource3d[ i ] );
 												if ( SUCCEEDED( hr ) && mFaceFrameSource3d[ i ] != nullptr ) {
 													hr = mFaceFrameSource3d[ i ]->OpenReader( &mFaceFrameReader3d[ i ] );
+													if ( SUCCEEDED( hr ) && mFaceFrameSource3d[ i ] != nullptr ) {
+													}
 												}
 											}
+
 											if ( mFaceFrameSource3d[ i ] != nullptr && mFaceFrameReader3d[ i ] != nullptr ) {
-												// TODO populate face 3D
+												IHighDefinitionFaceFrame * faceFrame = nullptr;
+												hr = mFaceFrameReader3d[ i ]->AcquireLatestFrame( &faceFrame );
+												if ( SUCCEEDED( hr ) && faceFrame != nullptr ) {
+													uint8_t trackingIdValid	= 0;
+													hr						= faceFrame->get_IsTrackingIdValid( &trackingIdValid );
+													if ( SUCCEEDED( hr ) ) {
+														if ( trackingIdValid ) {
+															IFaceAlignment* faceAlignment	= nullptr;
+															hr								= CreateFaceAlignment( &faceAlignment );
+															if ( SUCCEEDED( hr ) && faceAlignment != nullptr ) {
+																hr = faceFrame->GetAndRefreshFaceAlignmentResult( faceAlignment );
+																if ( SUCCEEDED( hr ) ) {
+																	RectI faceRect				= { 0 };
+																	hr							= faceAlignment->get_FaceBoundingBox( &faceRect );
+																	if ( SUCCEEDED( hr ) ) {
+																		body.mFace3d.mBounds = toRectf( faceRect );
+																	}
+
+																	FaceAlignmentQuality faceAlignmentQuality	= FaceAlignmentQuality_Low;
+																	hr											= faceAlignment->get_Quality( &faceAlignmentQuality );
+																	if ( SUCCEEDED( hr ) ) {
+																		body.mFace3d.mFaceAlignmentQuality = faceAlignmentQuality;
+																	}
+
+																	float faceShapeAnimations[ FaceShapeAnimations_Count ];
+																	hr = faceAlignment->GetAnimationUnits( FaceShapeAnimations_Count, faceShapeAnimations );
+																	if ( SUCCEEDED( hr ) ) {
+																		for ( size_t j = 0; j < (size_t)FaceShapeAnimations_Count; ++j ) {
+																			body.mFace3d.mFaceShapeAnimations[ (FaceShapeAnimations)j ] = faceShapeAnimations[ j ];
+																		}
+																	}
+																	
+																	float faceShapeDeformations[ FaceShapeDeformations_Count ];
+																	IFaceModel* faceModel	= nullptr;
+																	hr						= CreateFaceModel( 1.0, FaceShapeDeformations_Count, faceShapeDeformations, &faceModel );
+																	if ( SUCCEEDED( hr ) && faceModel != nullptr ) {
+																		uint32_t hairColor	= 0x00000000;
+																		hr					= faceModel->get_HairColor( &hairColor );
+																		if ( SUCCEEDED( hr ) ) {
+																			body.mFace3d.mColorHair = ColorA8u::hexA( hairColor );
+																		}
+
+																		uint32_t skinColor	= 0x00000000;
+																		hr					= faceModel->get_SkinColor( &skinColor );
+																		if ( SUCCEEDED( hr ) ) {
+																			body.mFace3d.mColorSkin = ColorA8u::hexA( skinColor );
+																		}
+																		
+																		hr = faceModel->GetFaceShapeDeformations( FaceShapeDeformations_Count, faceShapeDeformations );
+																		if ( SUCCEEDED( hr ) ) {
+																			for ( size_t j = 0; j < (size_t)FaceShapeDeformations_Count; ++j ) {
+																				body.mFace3d.mFaceShapeDeformations[ (FaceShapeDeformations)j ] = faceShapeDeformations[ j ];
+																			}
+																		}
+
+																		float scale = 0.0f;
+																		hr			= faceModel->get_Scale( &scale );
+																		if ( SUCCEEDED( hr ) ) {
+																			body.mFace3d.mScale = scale;
+																		}
+																		
+																		uint32_t vertexCount = body.getFace3d().getNumVertices();
+																		if ( SUCCEEDED( hr ) && vertexCount > 0 ) {
+																			CameraSpacePoint* vertices	= new CameraSpacePoint[  ];
+																			hr							= faceModel->CalculateVerticesForAlignment( faceAlignment, vertexCount, vertices );
+																			if ( SUCCEEDED( hr ) ) {
+																				for ( size_t j = 0; j < vertexCount; ++j ) {
+																					Vec3f v = toVec3f( vertices[ j ] );
+																					body.mFace3d.mVertices.push_back( v );
+																				}
+																			}
+																			delete [] vertices;
+																		}
+																	}
+
+																	CameraSpacePoint headPivotPoint;
+																	hr = faceAlignment->get_HeadPivotPoint( &headPivotPoint );
+																	if ( SUCCEEDED( hr ) ) {
+																		body.mFace3d.mHeadPivotPoint = toVec3f( headPivotPoint );
+																	}
+
+																	Vector4 faceOrientation;
+																	hr = faceAlignment->get_FaceOrientation( &faceOrientation );
+																	if ( SUCCEEDED( hr ) ) {
+																		body.mFace3d.mOrientation = toQuatf( faceOrientation );
+																	}
+																}
+															}
+														}
+													} else {
+														mFaceFrameSource3d[ i ]->put_TrackingId( body.getId() );
+													}
+												}
 											}
 										}
 									}

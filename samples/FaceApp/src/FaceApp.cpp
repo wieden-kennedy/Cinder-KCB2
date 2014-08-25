@@ -113,7 +113,7 @@ void FaceApp::setup()
 	mFullScreen	= false;
 
 	mDevice = Kinect2::Device::create();
-	mDevice->enableFaceTracking2d();
+	mDevice->enableFaceTracking3d();
 	mDevice->start();
 	mDevice->connectBodyEventHandler( [ & ]( const Kinect2::BodyFrame& frame )
 	{
