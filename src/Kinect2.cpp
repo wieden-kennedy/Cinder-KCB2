@@ -1152,6 +1152,7 @@ void Device::start()
 							process.mNewData	= true;
 						}
 					}
+					std::this_thread::sleep_for(std::chrono::milliseconds(KINECT2_UPDATE_CYCLE));
 				}
 			};
 			break;
@@ -1522,6 +1523,7 @@ void Device::start()
 							process.mNewData	= true;
 						}
 					}
+					std::this_thread::sleep_for(std::chrono::milliseconds(KINECT2_UPDATE_CYCLE));
 				}
 			};
 			break;
@@ -1567,6 +1569,7 @@ void Device::start()
 							process.mNewData	= true;
 						}
 					}
+					std::this_thread::sleep_for(std::chrono::milliseconds(KINECT2_UPDATE_CYCLE));
 				}
 			};
 			break;
@@ -1614,6 +1617,7 @@ void Device::start()
 							process.mNewData	= true;
 						}
 					}
+					std::this_thread::sleep_for(std::chrono::milliseconds(KINECT2_UPDATE_CYCLE));
 				}
 			};
 			break;
@@ -1661,6 +1665,7 @@ void Device::start()
 							process.mNewData	= true;
 						}
 					}
+					std::this_thread::sleep_for(std::chrono::milliseconds(KINECT2_UPDATE_CYCLE));
 				}
 			};
 			break;
@@ -1706,6 +1711,7 @@ void Device::start()
 							process.mNewData	= true;
 						}
 					}
+					std::this_thread::sleep_for(std::chrono::milliseconds(KINECT2_UPDATE_CYCLE));
 				}
 			};
 			break;
@@ -1752,6 +1758,7 @@ void Device::start()
 							process.mNewData			= true;
 						}
 					}
+					std::this_thread::sleep_for(std::chrono::milliseconds(KINECT2_UPDATE_CYCLE));
 				}
 			};
 			break;

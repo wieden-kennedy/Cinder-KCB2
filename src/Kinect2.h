@@ -57,6 +57,8 @@
 #endif
 #pragma comment( lib, "wbemuuid.lib" )
 
+#define KINECT2_UPDATE_CYCLE 20  /*Proposed value: 20 ms, can be tuned*/
+
 namespace Kinect2 {
 
 class Device;
