@@ -123,13 +123,17 @@ public:
 	uint8_t														getIndex() const;
 	const std::map<JointType, Body::Joint>&						getJointMap() const;
 	bool														isTracked() const;
+	const HandState&											getLeftHandState() const;
+	const HandState&											getRightHandState() const;
 protected:
-	Body( uint64_t id, uint8_t index, const std::map<JointType, Body::Joint>& jointMap );
+	Body(uint64_t id, uint8_t index, const std::map<JointType, Body::Joint>& jointMap, HandState leftHandState, HandState rightHandState );
 
 	uint64_t													mId;
 	uint8_t														mIndex;
 	std::map<JointType, Body::Joint>							mJointMap;
 	bool														mTracked;
+	HandState													mLeftHandState;
+	HandState													mRightHandState;
 
 	friend class												Device;
 };
