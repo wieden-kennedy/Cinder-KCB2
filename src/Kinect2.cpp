@@ -298,8 +298,8 @@ Body::Body()
 {
 }
 
-Body::Body( uint64_t id, uint8_t index, const map<JointType, Body::Joint>& jointMap )
-: mId( id ), mIndex( index ), mJointMap( jointMap ), mTracked( true )
+Body::Body(uint64_t id, uint8_t index, const map<JointType, Body::Joint>& jointMap, HandState leftHandState, HandState rightHandState)
+	: mId(id), mIndex(index), mJointMap(jointMap), mTracked(true), mLeftHandState(leftHandState), mRightHandState(rightHandState)
 {
 }
 
@@ -369,6 +369,16 @@ const map<JointType, Body::Joint>& Body::getJointMap() const
 bool Body::isTracked() const 
 { 
 	return mTracked; 
+}
+
+const HandState& Body::getLeftHandState() const
+{
+	return mLeftHandState;
+}
+
+const HandState& Body::getRightHandState() const
+{
+	return mRightHandState;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
@@ -884,6 +894,11 @@ void Device::start()
 										uint64_t id = 0;
 										kinectBody->get_TrackingId( &id );
 
+										HandState leftHandState = HandState_Unknown;
+										HandState rightHandState = HandState_Unknown;
+										kinectBody->get_HandLeftState(&leftHandState);
+										kinectBody->get_HandRightState(&rightHandState);
+
 										map<JointType, Body::Joint> jointMap;
 										for ( int32_t j = 0; j < JointType_Count; ++j ) {
 											JointType parentJoint = (JointType)j;
@@ -973,7 +988,7 @@ void Device::start()
 												);
 											jointMap.insert( pair<JointType, Body::Joint>( static_cast<JointType>( j ), joint ) );
 										}
-										Body body( id, i, jointMap );
+										Body body(id, i, jointMap, leftHandState, rightHandState);
 										frame.mBodies.push_back( body );
 									}
 									kinectBody->Release();
