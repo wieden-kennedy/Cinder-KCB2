@@ -792,6 +792,8 @@ void Device::Process::stop()
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
+static const long long kThreadSleepDuration = 30L;
+
 DeviceRef Device::create()
 {
 	return DeviceRef( new Device() );
@@ -1121,7 +1123,7 @@ void Device::start()
 			{
 				while ( process.mRunning ) {
 					if ( process.mNewData || mKinect == KCB_INVALID_HANDLE ) {
-						std::this_thread::yield();
+						this_thread::sleep_for( chrono::milliseconds( kThreadSleepDuration ) );
 						continue;
 					}
 
@@ -1160,7 +1162,7 @@ void Device::start()
 			{
 				while ( process.mRunning ) {
 					if ( process.mNewData ) {
-						std::this_thread::yield();
+						this_thread::sleep_for( chrono::milliseconds( kThreadSleepDuration ) );
 						continue;
 					}
 
@@ -1530,7 +1532,7 @@ void Device::start()
 			{
 				while ( process.mRunning ) {
 					if ( process.mNewData || mKinect == KCB_INVALID_HANDLE ) {
-						std::this_thread::yield();
+						this_thread::sleep_for( chrono::milliseconds( kThreadSleepDuration ) );
 						continue;
 					}
 
@@ -1575,7 +1577,7 @@ void Device::start()
 			{
 				while ( process.mRunning ) {
 					if ( process.mNewData || mKinect == KCB_INVALID_HANDLE ) {
-						std::this_thread::yield();
+						this_thread::sleep_for( chrono::milliseconds( kThreadSleepDuration ) );
 						continue;
 					}
 
@@ -1622,7 +1624,7 @@ void Device::start()
 			{
 				while ( process.mRunning ) {
 					if ( process.mNewData || mKinect == KCB_INVALID_HANDLE ) {
-						std::this_thread::yield();
+						this_thread::sleep_for( chrono::milliseconds( kThreadSleepDuration ) );
 						continue;
 					}
 
@@ -1669,7 +1671,7 @@ void Device::start()
 			{
 				while ( process.mRunning ) {
 					if ( process.mNewData || mKinect == KCB_INVALID_HANDLE ) {
-						std::this_thread::yield();
+						this_thread::sleep_for( chrono::milliseconds( kThreadSleepDuration ) );
 						continue;
 					}
 
@@ -1714,7 +1716,7 @@ void Device::start()
 			{
 				while ( process.mRunning ) {
 					if ( process.mNewData || mKinect == KCB_INVALID_HANDLE ) {
-						std::this_thread::yield();
+						this_thread::sleep_for( chrono::milliseconds( kThreadSleepDuration ) );
 						continue;
 					}
 
