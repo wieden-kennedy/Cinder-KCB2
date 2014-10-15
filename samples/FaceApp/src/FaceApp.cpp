@@ -50,9 +50,8 @@ public:
 	void							update();
 private:
 	std::vector<Kinect2::Body>		mBodies;
-	ci::Channel8u					mChannelBodyIndex;
-	ci::Channel16u					mChannelDepth;
 	Kinect2::DeviceRef				mDevice;
+	ci::Surface8u					mSurfaceColor;
 
 	float							mFrameRate;
 	bool							mFullScreen;
@@ -69,48 +68,23 @@ void FaceApp::draw()
 	gl::clear();
 	gl::setMatricesWindow( getWindowSize() );
 
-	if ( mChannelDepth ) {
-		gl::enable( GL_TEXTURE_2D );
-		gl::TextureRef tex = gl::Texture::create( Kinect2::channel16To8( mChannelDepth ) );
-		gl::draw( tex, tex->getBounds(), Rectf( getWindowBounds() ) );
-	}
-	
-	if ( mChannelBodyIndex ) {
-		gl::enable( GL_TEXTURE_2D );
-		gl::color( ColorAf( Colorf::white(), 0.15f ) );
-		gl::TextureRef tex = gl::Texture::create( Kinect2::colorizeBodyIndex( mChannelBodyIndex ) );
-		gl::draw( tex, tex->getBounds(), Rectf( getWindowBounds() ) );
-
+	if ( mSurfaceColor ) {	
 		gl::color( ColorAf::white() );
-		gl::pushMatrices();
-		gl::scale( Vec2f( getWindowSize() ) / Vec2f( mChannelBodyIndex.getSize() ) );
+		gl::enable( GL_TEXTURE_2D );
+		gl::TextureRef tex = gl::Texture::create( mSurfaceColor );
+		gl::draw( tex, tex->getBounds(), Rectf( getWindowBounds() ) );
+	
 		gl::disable( GL_TEXTURE_2D );
+		gl::pushMatrices();
+		gl::scale( Vec2f( getWindowSize() ) / Vec2f( mSurfaceColor.getSize() ) );
 		for ( const Kinect2::Body& body : mBodies ) {
 			if ( body.isTracked() ) {
-
-				for ( const auto& iter : body.getExpressions() ) {
-					const Expression& e		 = iter.first;
-					const DetectionResult& r = iter.second;
-					switch ( e ) {
-					case Expression::Expression_Happy:
-						switch ( r ) {
-						case DetectionResult::DetectionResult_Yes:
-							console() << "HAPPY!" << endl;
-							break;
-						case DetectionResult::DetectionResult_No:
-							console() << "SAD!" << endl;
-							break;
-						case DetectionResult::DetectionResult_Maybe:
-							console() << "CONFUSED!" << endl;
-							break;
-						}
-						break;
-					}
-				}
-
 				const Kinect2::Body::Face2d& face = body.getFace2d();
 				if ( face.isTracked() ) {
-					gl::drawStrokedRect( face.getBoundsInfrared() );
+					gl::drawStrokedRect( face.getBoundsColor() );
+					for ( const Vec2f& i : face.getPointsColor() ) {
+						gl::drawSolidCircle( i, 3.0f, 16 );
+					}
 				}
 			}
 		}
@@ -122,7 +96,7 @@ void FaceApp::draw()
 
 void FaceApp::prepareSettings( Settings* settings )
 {
-	settings->prepareWindow( Window::Format().size( 800, 600 ).title( "Face App" ) );
+	settings->prepareWindow( Window::Format().size( 960, 540 ).title( "Face App" ) );
 	settings->setFrameRate( 60.0f );
 }
 
@@ -135,19 +109,14 @@ void FaceApp::setup()
 
 	mDevice = Kinect2::Device::create();
 	mDevice->enableFaceTracking2d();
-	mDevice->enableFaceTracking3d();
 	mDevice->start();
 	mDevice->connectBodyEventHandler( [ & ]( const Kinect2::BodyFrame& frame )
 	{
 		mBodies = frame.getBodies();
 	} );
-	mDevice->connectBodyIndexEventHandler( [ & ]( const Kinect2::BodyIndexFrame frame )
+	mDevice->connectColorEventHandler( [ & ]( const Kinect2::ColorFrame frame )
 	{
-		mChannelBodyIndex = frame.getChannel();
-	} );
-	mDevice->connectDepthEventHandler( [ & ]( const Kinect2::DepthFrame frame )
-	{
-		mChannelDepth = frame.getChannel();
+		mSurfaceColor = frame.getSurface();
 	} );
 		
 	mParams = params::InterfaceGl::create( "Params", Vec2i( 200, 100 ) );
