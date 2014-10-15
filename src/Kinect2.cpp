@@ -1401,6 +1401,9 @@ void Device::start()
 																}
 																	
 																float faceShapeDeformations[ FaceShapeDeformations_Count ];
+																for ( size_t j = 0; j < FaceShapeDeformations_Count; ++j ) {
+																	faceShapeDeformations[ j ] = 0.0f;
+																}
 																IFaceModel* faceModel	= nullptr;
 																hr						= CreateFaceModel( 1.0, FaceShapeDeformations_Count, faceShapeDeformations, &faceModel );
 																if ( SUCCEEDED( hr ) && faceModel != nullptr ) {
@@ -1441,26 +1444,35 @@ void Device::start()
 																		body.mFace3d.mOrientation = toQuatf( faceOrientation );
 																	}
 
-																	static uint32_t triangleCount	= 0;
-																	static uint32_t vertexCount		= 0;
-																	hr = GetFaceModelVertexCount( &vertexCount );
-																	if ( SUCCEEDED( hr ) && vertexCount > 0 ) {
-																		hr = GetFaceModelTriangleCount( &triangleCount );
-																		if ( SUCCEEDED( hr ) && triangleCount > 0 ) {
+																	static uint32_t indexCount	= 0;
+																	static uint32_t vertexCount	= 0;
+																	if ( indexCount == 0 ) {
+																		GetFaceModelTriangleCount( &indexCount );
+																		indexCount *= 3;
+																	}
+																	if ( vertexCount == 0 ) {
+																		GetFaceModelVertexCount( &vertexCount );
+																	}
 
-																			uint32_t indexCount = triangleCount * 3;
-																			uint32_t* indices	= new uint32_t[ indexCount ];
-																			GetFaceModelTriangles( indexCount, indices );
-
-																			CameraSpacePoint* vertices	= new CameraSpacePoint[ vertexCount ];
-																			hr							= faceModel->CalculateVerticesForAlignment( faceAlignment, vertexCount, vertices );
-
-																			body.mFace3d.mMesh.appendIndices( indices, indexCount );
-																			body.mFace3d.mMesh.appendVertices( reinterpret_cast<Vec3f*>( vertices ), vertexCount );
-
-																			delete [] indices;
-																			delete [] vertices;
+																	static vector<uint32_t> indices;
+																	if ( indices.empty() ) {
+																		uint32_t* triangles = new uint32_t[ indexCount ];
+																		GetFaceModelTriangles( indexCount, triangles );
+																		for ( size_t j = 0; j < indexCount; ++j ) {
+																			indices.push_back( triangles[ j ] );
 																		}
+																		delete [] triangles;
+																	}
+
+																	if ( !indices.empty() > 0 && vertexCount > 0 ) {
+																		CameraSpacePoint* vertices = new CameraSpacePoint[ vertexCount ];
+																		
+																		hr = faceModel->CalculateVerticesForAlignment( faceAlignment, vertexCount, vertices );
+																		if ( SUCCEEDED( hr ) ) {
+																			body.mFace3d.mMesh.appendIndices( &indices[ 0 ], indexCount );
+																			body.mFace3d.mMesh.appendVertices( reinterpret_cast<Vec3f*>( vertices ), vertexCount );
+																		}
+																		delete [] vertices;
 																	}
 																}
 															}

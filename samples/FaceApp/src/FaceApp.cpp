@@ -94,9 +94,7 @@ void FaceApp::draw()
 					const TriMesh& mesh = face3d.getMesh();
 					vector<Vec2f> verts;
 					for ( const Vec3f& i : mesh.getVertices() ) {
-						//Vec2f v = mDevice->mapCameraToColor( i );
-						Vec2f v = ( face3d.getOrientation() * i ).xy() * 0.0002f;
-						v += Vec2f( 600.0f, 400.0f );
+						Vec2f v = mDevice->mapCameraToColor( i );
 						verts.push_back( v );
 					}
 
