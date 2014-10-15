@@ -748,6 +748,9 @@ void Device::Process::stop()
 
 static const long long kThreadSleepDuration = 30L;
 
+uint32_t Device::sFaceModelIndexCount	= 0;
+uint32_t Device::sFaceModelVertexCount	= 0;
+
 DeviceRef Device::create()
 {
 	return DeviceRef( new Device() );
@@ -762,11 +765,23 @@ Device::Device()
 	mEventHandlerInfraredLongExposure( nullptr ), mKinect( KCB_INVALID_HANDLE ), 
 	mSensor( nullptr )
 {
+	if ( sFaceModelIndexCount == 0 ) {
+		GetFaceModelTriangleCount( &sFaceModelIndexCount );
+		sFaceModelIndexCount *= 3;
+	}
+	if ( sFaceModelVertexCount == 0 ) {
+		GetFaceModelVertexCount( &sFaceModelVertexCount );
+	}
+	
 	for ( size_t i = 0; i < BODY_COUNT; ++i ) {
+		mFaceModelIndices[ i ]	= new uint32_t[ sFaceModelIndexCount ];
+		mFaceModelVertices[ i ] = new CameraSpacePoint[ sFaceModelVertexCount ];
 		mFaceFrameSource2d[ i ] = nullptr;
 		mFaceFrameReader2d[ i ] = nullptr;
 		mFaceFrameSource3d[ i ] = nullptr;
 		mFaceFrameReader3d[ i ] = nullptr;
+
+		GetFaceModelTriangles( sFaceModelIndexCount, mFaceModelIndices[ i ] );
 	}
 
 	App::get()->getSignalUpdate().connect( bind( &Device::update, this ) );
@@ -777,6 +792,8 @@ Device::~Device()
 	stop();
 
 	for ( size_t i = 0; i < BODY_COUNT; ++i ) {
+		delete [] mFaceModelIndices[ i ];
+		delete [] mFaceModelVertices[ i ];
 		if ( mFaceFrameSource2d[ i ] != nullptr ) {
 			mFaceFrameSource2d[ i ]->Release();
 			mFaceFrameSource2d[ i ] = nullptr;
@@ -1445,29 +1462,12 @@ void Device::start()
 																		body.mFace3d.mOrientation = toQuatf( faceOrientation );
 																	}
 
-																	static uint32_t indexCount	= 0;
-																	static uint32_t vertexCount	= 0;
-																	if ( indexCount == 0 ) {
-																		GetFaceModelTriangleCount( &indexCount );
-																		indexCount *= 3;
-																	}
-																	if ( vertexCount == 0 ) {
-																		GetFaceModelVertexCount( &vertexCount );
-																	}
-
-																	if ( indexCount > 0 && vertexCount > 0 ) {
-																		uint32_t* indices = new uint32_t[ indexCount ];
-																		GetFaceModelTriangles( indexCount, indices );
-
-																		CameraSpacePoint* vertices	= new CameraSpacePoint[ vertexCount ];
-																		hr							= faceModel->CalculateVerticesForAlignment( faceAlignment, vertexCount, vertices );
+																	if ( sFaceModelIndexCount > 0 && sFaceModelVertexCount > 0 ) {
+																		hr = faceModel->CalculateVerticesForAlignment( faceAlignment, sFaceModelVertexCount, mFaceModelVertices[ i ] );
 																		if ( SUCCEEDED( hr ) ) {
-																			body.mFace3d.mMesh.appendIndices( &indices[ 0 ], indexCount );
-																			body.mFace3d.mMesh.appendVertices( reinterpret_cast<Vec3f*>( vertices ), vertexCount );
+																			body.mFace3d.mMesh.appendIndices( &mFaceModelIndices[ i ][ 0 ], sFaceModelIndexCount );
+																			body.mFace3d.mMesh.appendVertices( reinterpret_cast<Vec3f*>( mFaceModelVertices[ i ] ), sFaceModelVertexCount );
 																		}
-
-																		delete [] indices;
-																		delete [] vertices;
 																	}
 																	
 																	faceModel->Release();

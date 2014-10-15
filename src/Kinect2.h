@@ -514,6 +514,12 @@ protected:
 	bool												mEnabledFaceTracking3d;
 	bool												mEnabledHandTracking;
 	bool												mEnabledJointTracking;
+
+	static uint32_t										sFaceModelIndexCount;
+	static uint32_t										sFaceModelVertexCount;
+	uint32_t*											mFaceModelIndices[ BODY_COUNT ];
+	CameraSpacePoint*									mFaceModelVertices[ BODY_COUNT ];
+
 	IFaceFrameReader*									mFaceFrameReader2d[ BODY_COUNT ];
 	IFaceFrameSource*									mFaceFrameSource2d[ BODY_COUNT ];
 	IHighDefinitionFaceFrameReader*						mFaceFrameReader3d[ BODY_COUNT ];
