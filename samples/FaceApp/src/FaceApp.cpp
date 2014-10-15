@@ -79,12 +79,33 @@ void FaceApp::draw()
 		gl::scale( Vec2f( getWindowSize() ) / Vec2f( mSurfaceColor.getSize() ) );
 		for ( const Kinect2::Body& body : mBodies ) {
 			if ( body.isTracked() ) {
-				const Kinect2::Body::Face2d& face = body.getFace2d();
-				if ( face.isTracked() ) {
-					gl::drawStrokedRect( face.getBoundsColor() );
-					for ( const Vec2f& i : face.getPointsColor() ) {
+
+				const Kinect2::Body::Face2d& face2d = body.getFace2d();
+				if ( face2d.isTracked() ) {
+					gl::drawStrokedRect( face2d.getBoundsColor() );
+					for ( const Vec2f& i : face2d.getPointsColor() ) {
 						gl::drawSolidCircle( i, 3.0f, 16 );
 					}
+				}
+
+				const Kinect2::Body::Face3d& face3d = body.getFace3d();
+				if ( face3d.isTracked() ) {
+
+					const TriMesh& mesh = face3d.getMesh();
+					vector<Vec2f> verts;
+					for ( const Vec3f& i : mesh.getVertices() ) {
+						//Vec2f v = mDevice->mapCameraToColor( i );
+						Vec2f v = ( face3d.getOrientation() * i ).xy() * 0.0002f;
+						v += Vec2f( 600.0f, 400.0f );
+						verts.push_back( v );
+					}
+
+					gl::enableWireframe();
+					TriMesh2d mesh2d;
+					mesh2d.appendIndices( &mesh.getIndices()[ 0 ], mesh.getNumIndices() );
+					mesh2d.appendVertices( &verts[ 0 ], mesh.getNumVertices() );
+					gl::draw( mesh2d );
+					gl::disableWireframe();
 				}
 			}
 		}
@@ -109,6 +130,7 @@ void FaceApp::setup()
 
 	mDevice = Kinect2::Device::create();
 	mDevice->enableFaceTracking2d();
+	mDevice->enableFaceTracking3d();
 	mDevice->start();
 	mDevice->connectBodyEventHandler( [ & ]( const Kinect2::BodyFrame& frame )
 	{

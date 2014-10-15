@@ -333,10 +333,6 @@ const Quatf& Body::Face2d::getRotation() const
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-vector<uint32_t>	Body::Face3d::sIndices;
-uint32_t			Body::Face3d::sNumIndices	= 0;
-uint32_t			Body::Face3d::sNumVertices	= 0;
-
 Body::Face3d::Face3d()
 : IFace(), mColorHair( ColorA8u::hex( 0x00000000 ) ), mColorSkin( ColorA8u::hex( 0x00000000 ) ), 
 mFaceAlignmentQuality( FaceAlignmentQuality_Low ), mHeadPivotPoint( Vec3f::zero() ), 
@@ -348,19 +344,6 @@ mScale( 0.0f )
 	for ( size_t i = 0; i < (size_t)FaceShapeDeformations_Count; ++i ) {
 		mFaceShapeDeformations[ (FaceShapeDeformations)i ] = 0.0f;
 	}
-}
-
-TriMesh Body::Face3d::createTriMesh() const
-{
-	TriMesh mesh;
-	if ( sNumIndices > 0	&& 
-		 sNumVertices > 0	&& 
-		 !sIndices.empty()	&& 
-		 !mVertices.empty() ) {
-		mesh.appendIndices( &sIndices[ 0 ], sIndices.size() );
-		mesh.appendVertices( &mVertices[ 0 ], mVertices.size() );
-	}
-	return mesh;
 }
 
 const Rectf& Body::Face3d::getBounds() const
@@ -393,33 +376,9 @@ const Vec3f& Body::Face3d::getHeadPivotPoint() const
 	return mHeadPivotPoint;
 }
 
-const vector<uint32_t>& Body::Face3d::getIndices() const
+const TriMesh& Body::Face3d::getMesh() const
 {
-	if ( sNumIndices > 0 && sIndices.size() != sNumIndices ) {
-		uint32_t* indices = new uint32_t[ sNumIndices ];
-		GetFaceModelTriangles( sNumIndices, indices );
-		for ( size_t i = 0; i < sNumIndices; ++i ) {
-			sIndices.push_back( indices[ i ] );
-		}
-		delete [] indices;
-	}
-	return sIndices;
-}
-
-uint32_t Body::Face3d::getNumIndices() const
-{
-	if ( sNumIndices == 0 ) {
-		GetFaceModelTriangleCount( &sNumIndices );
-	}
-	return sNumIndices;
-}
-
-uint32_t Body::Face3d::getNumVertices() const
-{
-	if ( sNumVertices == 0 ) {
-		GetFaceModelVertexCount( &sNumVertices );
-	}
-	return sNumVertices;
+	return mMesh;
 }
 
 const Quatf& Body::Face3d::getOrientation() const
@@ -435,11 +394,6 @@ float Body::Face3d::getScale() const
 const ColorA8u& Body::Face3d::getSkinColor() const
 {
 	return mColorSkin;
-}
-
-const vector<Vec3f>& Body::Face3d::getVertices() const
-{
-	return mVertices;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
@@ -1418,14 +1372,16 @@ void Device::start()
 												if ( SUCCEEDED( hr ) && faceFrame != nullptr ) {
 													uint8_t trackingIdValid	= 0;
 													hr						= faceFrame->get_IsTrackingIdValid( &trackingIdValid );
-													if ( SUCCEEDED( hr ) && trackingIdValid ) {
+													if ( SUCCEEDED( hr ) && trackingIdValid != 0 ) {
 														IFaceAlignment* faceAlignment	= nullptr;
 														hr								= CreateFaceAlignment( &faceAlignment );
 														if ( SUCCEEDED( hr ) && faceAlignment != nullptr ) {
 															hr = faceFrame->GetAndRefreshFaceAlignmentResult( faceAlignment );
 															if ( SUCCEEDED( hr ) ) {
-																RectI faceRect				= { 0 };
-																hr							= faceAlignment->get_FaceBoundingBox( &faceRect );
+																body.mFace3d.mTracked = true;
+
+																RectI faceRect	= { 0 };
+																hr				= faceAlignment->get_FaceBoundingBox( &faceRect );
 																if ( SUCCEEDED( hr ) ) {
 																	body.mFace3d.mBounds = toRectf( faceRect );
 																}
@@ -1459,7 +1415,7 @@ void Device::start()
 																	if ( SUCCEEDED( hr ) ) {
 																		body.mFace3d.mColorSkin = ColorA8u::hexA( skinColor );
 																	}
-																		
+
 																	hr = faceModel->GetFaceShapeDeformations( FaceShapeDeformations_Count, faceShapeDeformations );
 																	if ( SUCCEEDED( hr ) ) {
 																		for ( size_t j = 0; j < (size_t)FaceShapeDeformations_Count; ++j ) {
@@ -1472,31 +1428,40 @@ void Device::start()
 																	if ( SUCCEEDED( hr ) ) {
 																		body.mFace3d.mScale = scale;
 																	}
-																		
-																	uint32_t vertexCount = body.getFace3d().getNumVertices();
-																	if ( SUCCEEDED( hr ) && vertexCount > 0 ) {
-																		CameraSpacePoint* vertices	= new CameraSpacePoint[  ];
-																		hr							= faceModel->CalculateVerticesForAlignment( faceAlignment, vertexCount, vertices );
-																		if ( SUCCEEDED( hr ) ) {
-																			for ( size_t j = 0; j < vertexCount; ++j ) {
-																				Vec3f v = toVec3f( vertices[ j ] );
-																				body.mFace3d.mVertices.push_back( v );
-																			}
-																		}
-																		delete [] vertices;
+																	
+																	CameraSpacePoint headPivotPoint;
+																	hr = faceAlignment->get_HeadPivotPoint( &headPivotPoint );
+																	if ( SUCCEEDED( hr ) ) {
+																		body.mFace3d.mHeadPivotPoint = toVec3f( headPivotPoint );
 																	}
-																}
 
-																CameraSpacePoint headPivotPoint;
-																hr = faceAlignment->get_HeadPivotPoint( &headPivotPoint );
-																if ( SUCCEEDED( hr ) ) {
-																	body.mFace3d.mHeadPivotPoint = toVec3f( headPivotPoint );
-																}
+																	Vector4 faceOrientation;
+																	hr = faceAlignment->get_FaceOrientation( &faceOrientation );
+																	if ( SUCCEEDED( hr ) ) {
+																		body.mFace3d.mOrientation = toQuatf( faceOrientation );
+																	}
 
-																Vector4 faceOrientation;
-																hr = faceAlignment->get_FaceOrientation( &faceOrientation );
-																if ( SUCCEEDED( hr ) ) {
-																	body.mFace3d.mOrientation = toQuatf( faceOrientation );
+																	static uint32_t triangleCount	= 0;
+																	static uint32_t vertexCount		= 0;
+																	hr = GetFaceModelVertexCount( &vertexCount );
+																	if ( SUCCEEDED( hr ) && vertexCount > 0 ) {
+																		hr = GetFaceModelTriangleCount( &triangleCount );
+																		if ( SUCCEEDED( hr ) && triangleCount > 0 ) {
+
+																			uint32_t indexCount = triangleCount * 3;
+																			uint32_t* indices	= new uint32_t[ indexCount ];
+																			GetFaceModelTriangles( indexCount, indices );
+
+																			CameraSpacePoint* vertices	= new CameraSpacePoint[ vertexCount ];
+																			hr							= faceModel->CalculateVerticesForAlignment( faceAlignment, vertexCount, vertices );
+
+																			body.mFace3d.mMesh.appendIndices( indices, indexCount );
+																			body.mFace3d.mMesh.appendVertices( reinterpret_cast<Vec3f*>( vertices ), vertexCount );
+
+																			delete [] indices;
+																			delete [] vertices;
+																		}
+																	}
 																}
 															}
 														}

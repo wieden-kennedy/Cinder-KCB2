@@ -136,26 +136,17 @@ public:
 	public:
 		Face3d();
 
-		ci::TriMesh										createTriMesh() const;
-
 		const ci::Rectf&								getBounds() const;
 		FaceAlignmentQuality							getFaceAlignmentQuality() const;
 		const std::map<FaceShapeAnimations, float>&		getFaceShapeAnimations() const;
 		const std::map<FaceShapeDeformations, float>&	getFaceShapeDeformations() const;
 		const ci::ColorA8u&								getHairColor() const;
 		const ci::Vec3f&								getHeadPivotPoint() const;
-		const std::vector<uint32_t>&					getIndices() const;
-		uint32_t										getNumIndices() const;
-		uint32_t										getNumVertices() const;
+		const ci::TriMesh&								getMesh() const;
 		const ci::Quatf&								getOrientation() const;
 		float											getScale() const;
 		const ci::ColorA8u&								getSkinColor() const;
-		const std::vector<ci::Vec3f>&					getVertices() const;
 	protected:
-		static std::vector<uint32_t>					sIndices;
-		static uint32_t									sNumIndices;
-		static uint32_t									sNumVertices;
-
 		ci::Rectf										mBounds;
 		ci::ColorA8u									mColorHair;
 		ci::ColorA8u									mColorSkin;
@@ -163,9 +154,9 @@ public:
 		std::map<FaceShapeAnimations, float>			mFaceShapeAnimations;
 		std::map<FaceShapeDeformations, float>			mFaceShapeDeformations;
 		ci::Vec3f										mHeadPivotPoint;
+		ci::TriMesh										mMesh;
 		ci::Quatf										mOrientation;
 		float											mScale;
-		std::vector<ci::Vec3f>							mVertices;
 
 		friend class									Device;
 	};
