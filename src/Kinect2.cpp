@@ -1344,12 +1344,12 @@ void Device::start()
 																	body.mFace2d.mFaceProperties[ (FaceProperty)j ] = faceProperties[ j ];
 																}
 															}
-														}
-														if ( faceFrameResult != nullptr ) {
 															faceFrameResult->Release();
 															faceFrameResult = nullptr;
 														}
 													}
+													faceFrame->Release();
+													faceFrame = nullptr;
 												} else {
 													mFaceFrameSource2d[ i ]->put_TrackingId( body.getId() );
 												}
@@ -1454,17 +1454,10 @@ void Device::start()
 																		GetFaceModelVertexCount( &vertexCount );
 																	}
 
-																	static vector<uint32_t> indices;
-																	if ( indices.empty() ) {
-																		uint32_t* triangles = new uint32_t[ indexCount ];
-																		GetFaceModelTriangles( indexCount, triangles );
-																		for ( size_t j = 0; j < indexCount; ++j ) {
-																			indices.push_back( triangles[ j ] );
-																		}
-																		delete [] triangles;
-																	}
+																	uint32_t* indices = new uint32_t[ indexCount ];
+																	GetFaceModelTriangles( indexCount, indices );
 
-																	if ( !indices.empty() > 0 && vertexCount > 0 ) {
+																	if ( indexCount > 0 && vertexCount > 0 ) {
 																		CameraSpacePoint* vertices = new CameraSpacePoint[ vertexCount ];
 																		
 																		hr = faceModel->CalculateVerticesForAlignment( faceAlignment, vertexCount, vertices );
@@ -1474,10 +1467,19 @@ void Device::start()
 																		}
 																		delete [] vertices;
 																	}
+
+																	delete [] indices;
+
+																	faceModel->Release();
+																	faceModel = nullptr;
 																}
 															}
+															faceAlignment->Release();
+															faceAlignment = nullptr;
 														}
 													}
+													faceFrame->Release();
+													faceFrame = nullptr;
 												} else {
 													mFaceFrameSource3d[ i ]->put_TrackingId( body.getId() );
 												}

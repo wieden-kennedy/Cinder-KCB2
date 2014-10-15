@@ -92,18 +92,20 @@ void FaceApp::draw()
 				if ( face3d.isTracked() ) {
 
 					const TriMesh& mesh = face3d.getMesh();
-					vector<Vec2f> verts;
-					for ( const Vec3f& i : mesh.getVertices() ) {
-						Vec2f v = mDevice->mapCameraToColor( i );
-						verts.push_back( v );
-					}
+					if ( mesh.getNumIndices() > 0 ) {
+						vector<Vec2f> verts;
+						for ( const Vec3f& i : mesh.getVertices() ) {
+							Vec2f v = mDevice->mapCameraToColor( i );
+							verts.push_back( v );
+						}
 
-					gl::enableWireframe();
-					TriMesh2d mesh2d;
-					mesh2d.appendIndices( &mesh.getIndices()[ 0 ], mesh.getNumIndices() );
-					mesh2d.appendVertices( &verts[ 0 ], mesh.getNumVertices() );
-					gl::draw( mesh2d );
-					gl::disableWireframe();
+						gl::enableWireframe();
+						TriMesh2d mesh2d;
+						mesh2d.appendIndices( &mesh.getIndices()[ 0 ], mesh.getNumIndices() );
+						mesh2d.appendVertices( &verts[ 0 ], mesh.getNumVertices() );
+						gl::draw( mesh2d );
+						gl::disableWireframe();
+					}
 				}
 			}
 		}
