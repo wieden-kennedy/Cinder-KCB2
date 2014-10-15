@@ -87,6 +87,27 @@ void FaceApp::draw()
 		gl::disable( GL_TEXTURE_2D );
 		for ( const Kinect2::Body& body : mBodies ) {
 			if ( body.isTracked() ) {
+
+				for ( const auto& iter : body.getExpressions() ) {
+					const Expression& e		 = iter.first;
+					const DetectionResult& r = iter.second;
+					switch ( e ) {
+					case Expression::Expression_Happy:
+						switch ( r ) {
+						case DetectionResult::DetectionResult_Yes:
+							console() << "HAPPY!" << endl;
+							break;
+						case DetectionResult::DetectionResult_No:
+							console() << "SAD!" << endl;
+							break;
+						case DetectionResult::DetectionResult_Maybe:
+							console() << "CONFUSED!" << endl;
+							break;
+						}
+						break;
+					}
+				}
+
 				const Kinect2::Body::Face2d& face = body.getFace2d();
 				if ( face.isTracked() ) {
 					gl::drawStrokedRect( face.getBoundsInfrared() );
@@ -113,6 +134,7 @@ void FaceApp::setup()
 	mFullScreen	= false;
 
 	mDevice = Kinect2::Device::create();
+	mDevice->enableFaceTracking2d();
 	mDevice->enableFaceTracking3d();
 	mDevice->start();
 	mDevice->connectBodyEventHandler( [ & ]( const Kinect2::BodyFrame& frame )

@@ -119,7 +119,7 @@
     <PreBuildEvent>
       <Command>xcopy /e /i /y "$(SolutionDir)..\..\..\lib\$(PlatformTarget)\*.dll" "$(SolutionDir)bin\"
 xcopy /e /i /y "$(KINECTSDK20_DIR)Redist\Face\$(PlatformTarget)\Kinect20.Face.dll" "$(SolutionDir)bin\"
-xcopy /e /i /y "$(KINECTSDK20_DIR)Redist\Face\$(PlatformTarget)\NuiDatabase" "$(SolutionDir)bin\"</Command>
+xcopy /e /i /y "$(KINECTSDK20_DIR)Redist\Face\$(PlatformTarget)\NuiDatabase" "$(SolutionDir)bin\NuiDatabase"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -147,7 +147,7 @@ xcopy /e /i /y "$(KINECTSDK20_DIR)Redist\Face\$(PlatformTarget)\NuiDatabase" "$(
     <PreBuildEvent>
       <Command>xcopy /e /i /y "$(SolutionDir)..\..\..\lib\$(PlatformTarget)\*.dll" "$(SolutionDir)bin\"
 xcopy /e /i /y "$(KINECTSDK20_DIR)Redist\Face\$(PlatformTarget)\Kinect20.Face.dll" "$(SolutionDir)bin\"
-xcopy /e /i /y "$(KINECTSDK20_DIR)Redist\Face\$(PlatformTarget)\NuiDatabase" "$(SolutionDir)bin\"</Command>
+xcopy /e /i /y "$(KINECTSDK20_DIR)Redist\Face\$(PlatformTarget)\NuiDatabase" "$(SolutionDir)bin\NuiDatabase"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -180,7 +180,7 @@ xcopy /e /i /y "$(KINECTSDK20_DIR)Redist\Face\$(PlatformTarget)\NuiDatabase" "$(
     <PreBuildEvent>
       <Command>xcopy /e /i /y "$(SolutionDir)..\..\..\lib\$(PlatformTarget)\*.dll" "$(SolutionDir)bin\"
 xcopy /e /i /y "$(KINECTSDK20_DIR)Redist\Face\$(PlatformTarget)\Kinect20.Face.dll" "$(SolutionDir)bin\"
-xcopy /e /i /y "$(KINECTSDK20_DIR)Redist\Face\$(PlatformTarget)\NuiDatabase" "$(SolutionDir)bin\"</Command>
+xcopy /e /i /y "$(KINECTSDK20_DIR)Redist\Face\$(PlatformTarget)\NuiDatabase" "$(SolutionDir)bin\NuiDatabase"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -212,7 +212,7 @@ xcopy /e /i /y "$(KINECTSDK20_DIR)Redist\Face\$(PlatformTarget)\NuiDatabase" "$(
     <PreBuildEvent>
       <Command>xcopy /e /i /y "$(SolutionDir)..\..\..\lib\$(PlatformTarget)\*.dll" "$(SolutionDir)bin\"
 xcopy /e /i /y "$(KINECTSDK20_DIR)Redist\Face\$(PlatformTarget)\Kinect20.Face.dll" "$(SolutionDir)bin\"
-xcopy /e /i /y "$(KINECTSDK20_DIR)Redist\Face\$(PlatformTarget)\NuiDatabase" "$(SolutionDir)bin\"</Command>
+xcopy /e /i /y "$(KINECTSDK20_DIR)Redist\Face\$(PlatformTarget)\NuiDatabase" "$(SolutionDir)bin\NuiDatabase"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
