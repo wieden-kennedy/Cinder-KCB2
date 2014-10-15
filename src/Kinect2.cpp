@@ -1328,7 +1328,7 @@ void Device::start()
 
 										if ( mEnabledFaceTracking2d ) {
 											if ( sensorIsOpen && mFaceFrameSource2d[ i ] == nullptr ) {
-												hr = CreateFaceFrameSource( mSensor, 0, kFaceFrameFeatures, &mFaceFrameSource2d[ i ] );
+												hr = CreateFaceFrameSource( mSensor, body.getId(), kFaceFrameFeatures, &mFaceFrameSource2d[ i ] );
 												if ( SUCCEEDED( hr ) && mFaceFrameSource2d[ i ] != nullptr ) {
 													hr = mFaceFrameSource2d[ i ]->OpenReader( &mFaceFrameReader2d[ i ] );
 													if ( SUCCEEDED( hr ) && mFaceFrameSource2d[ i ] != nullptr ) {
@@ -1342,7 +1342,7 @@ void Device::start()
 												if ( SUCCEEDED( hr ) && faceFrame != nullptr ) {
 													uint8_t trackingIdValid	= 0;
 													hr						= faceFrame->get_IsTrackingIdValid( &trackingIdValid );
-													if ( SUCCEEDED( hr ) && trackingIdValid ) {
+													if ( SUCCEEDED( hr ) && trackingIdValid != 0 ) {
 														IFaceFrameResult* faceFrameResult	= nullptr;
 														hr									= faceFrame->get_FaceFrameResult( &faceFrameResult );
 															
