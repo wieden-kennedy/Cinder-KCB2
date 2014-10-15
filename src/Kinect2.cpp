@@ -1404,6 +1404,7 @@ void Device::start()
 																for ( size_t j = 0; j < FaceShapeDeformations_Count; ++j ) {
 																	faceShapeDeformations[ j ] = 0.0f;
 																}
+
 																IFaceModel* faceModel	= nullptr;
 																hr						= CreateFaceModel( 1.0, FaceShapeDeformations_Count, faceShapeDeformations, &faceModel );
 																if ( SUCCEEDED( hr ) && faceModel != nullptr ) {
@@ -1454,22 +1455,21 @@ void Device::start()
 																		GetFaceModelVertexCount( &vertexCount );
 																	}
 
-																	uint32_t* indices = new uint32_t[ indexCount ];
-																	GetFaceModelTriangles( indexCount, indices );
-
 																	if ( indexCount > 0 && vertexCount > 0 ) {
-																		CameraSpacePoint* vertices = new CameraSpacePoint[ vertexCount ];
-																		
-																		hr = faceModel->CalculateVerticesForAlignment( faceAlignment, vertexCount, vertices );
+																		uint32_t* indices = new uint32_t[ indexCount ];
+																		GetFaceModelTriangles( indexCount, indices );
+
+																		CameraSpacePoint* vertices	= new CameraSpacePoint[ vertexCount ];
+																		hr							= faceModel->CalculateVerticesForAlignment( faceAlignment, vertexCount, vertices );
 																		if ( SUCCEEDED( hr ) ) {
 																			body.mFace3d.mMesh.appendIndices( &indices[ 0 ], indexCount );
 																			body.mFace3d.mMesh.appendVertices( reinterpret_cast<Vec3f*>( vertices ), vertexCount );
 																		}
+
+																		delete [] indices;
 																		delete [] vertices;
 																	}
-
-																	delete [] indices;
-
+																	
 																	faceModel->Release();
 																	faceModel = nullptr;
 																}
