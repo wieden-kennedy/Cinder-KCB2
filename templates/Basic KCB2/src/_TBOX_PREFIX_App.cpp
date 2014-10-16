@@ -27,7 +27,7 @@ void _TBOX_PREFIX_App::setup()
 	mDevice->start();
 	mDevice->connectDepthEventHandler( [ & ]( const Kinect2::DepthFrame& frame )
 	{
-		mChannelDepth = frame.getChannel();
+		mChannel = frame.getChannel();
 	} );
 }
 
