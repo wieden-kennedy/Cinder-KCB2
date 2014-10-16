@@ -174,7 +174,7 @@ map<size_t, string> getDeviceMap()
 	return deviceMap;
 }
 
-CameraSpacePoint toCameraSpacePoint( const Vec3f& v )
+CameraSpacePoint toCameraSpacePoint( const vec3& v )
 {
 	CameraSpacePoint p;
 	p.X = v.x;
@@ -183,7 +183,7 @@ CameraSpacePoint toCameraSpacePoint( const Vec3f& v )
 	return p;
 }
 
-ColorSpacePoint	toColorSpacePoint( const Vec2f& v )
+ColorSpacePoint	toColorSpacePoint( const vec2& v )
 {
 	ColorSpacePoint p;
 	p.X = v.x;
@@ -191,7 +191,7 @@ ColorSpacePoint	toColorSpacePoint( const Vec2f& v )
 	return p;
 }
 
-DepthSpacePoint	toDepthSpacePoint( const Vec2f& v )
+DepthSpacePoint	toDepthSpacePoint( const vec2& v )
 {
 	DepthSpacePoint p;
 	p.X = v.x;
@@ -199,7 +199,7 @@ DepthSpacePoint	toDepthSpacePoint( const Vec2f& v )
 	return p;
 }
 
-PointF toPointF( const Vec2f& v )
+PointF toPointF( const vec2& v )
 {
 	PointF p;
 	p.X = v.x;
@@ -207,17 +207,17 @@ PointF toPointF( const Vec2f& v )
 	return p;
 }
 
-Vector4 toVector4( const Quatf& q )
+Vector4 toVector4( const quat& q )
 {
 	Vector4 p;
 	p.w = q.w;
-	p.x = q.v.x;
-	p.y = q.v.y;
-	p.z = q.v.z;
+	p.x = q.x;
+	p.y = q.y;
+	p.z = q.z;
 	return p;
 }
 
-Vector4 toVector4( const Vec4f& v )
+Vector4 toVector4( const vec4& v )
 {
 	Vector4 p;
 	p.w = v.w;
@@ -227,9 +227,9 @@ Vector4 toVector4( const Vec4f& v )
 	return p;
 }
 
-Quatf toQuatf( const Vector4& v )
+quat toquat( const Vector4& v )
 {
-	return Quatf( v.w, v.x, v.y, v.z );
+	return quat( v.w, v.x, v.y, v.z );
 }
 
 Rectf toRectf( const RectI& v )
@@ -242,29 +242,29 @@ Rectf toRectf( const RectI& v )
 	return r;
 }
 
-Vec2f toVec2f( const PointF& v )
+vec2 tovec2( const PointF& v )
 {
-	return Vec2f( v.X, v.Y );
+	return vec2( v.X, v.Y );
 }
 
-Vec2f toVec2f( const ColorSpacePoint& v )
+vec2 tovec2( const ColorSpacePoint& v )
 {
-	return Vec2f( v.X, v.Y );
+	return vec2( v.X, v.Y );
 }
 
-Vec2f toVec2f( const DepthSpacePoint& v )
+vec2 tovec2( const DepthSpacePoint& v )
 {
-	return Vec2f( v.X, v.Y );
+	return vec2( v.X, v.Y );
 }
 
-Vec3f toVec3f( const CameraSpacePoint& v )
+vec3 tovec3( const CameraSpacePoint& v )
 {
-	return Vec3f( v.X, v.Y, v.Z );
+	return vec3( v.X, v.Y, v.Z );
 }
 
-Vec4f toVec4f( const Vector4& v )
+vec4 tovec4( const Vector4& v )
 {
-	return Vec4f( v.x, v.y, v.z, v.w );
+	return vec4( v.x, v.y, v.z, v.w );
 }
 
 string wcharToString( wchar_t* v )
@@ -316,17 +316,17 @@ const map<FaceProperty, DetectionResult>& Body::Face2d::getFaceProperties() cons
 	return mFaceProperties;
 }
 
-const vector<Vec2f>& Body::Face2d::getPointsColor() const
+const vector<vec2>& Body::Face2d::getPointsColor() const
 {
 	return mPointsColor;
 }
 
-const vector<Vec2f>& Body::Face2d::getPointsInfrared() const
+const vector<vec2>& Body::Face2d::getPointsInfrared() const
 {
 	return mPointsInfrared;
 }
 
-const Quatf& Body::Face2d::getRotation() const
+const quat& Body::Face2d::getRotation() const
 {
 	return mRotation;
 }
@@ -335,7 +335,7 @@ const Quatf& Body::Face2d::getRotation() const
 
 Body::Face3d::Face3d()
 : IFace(), mColorHair( ColorA8u::hex( 0x00000000 ) ), mColorSkin( ColorA8u::hex( 0x00000000 ) ), 
-mFaceAlignmentQuality( FaceAlignmentQuality_Low ), mHeadPivotPoint( Vec3f::zero() ), 
+mFaceAlignmentQuality( FaceAlignmentQuality_Low ), mHeadPivotPoint( vec3( 0.0f ) ), 
 mScale( 0.0f )
 {
 	for ( size_t i = 0; i < (size_t)FaceShapeAnimations_Count; ++i ) {
@@ -371,17 +371,17 @@ const ColorA8u& Body::Face3d::getHairColor() const
 	return mColorHair;
 }
 
-const Vec3f& Body::Face3d::getHeadPivotPoint() const
+const vec3& Body::Face3d::getHeadPivotPoint() const
 {
 	return mHeadPivotPoint;
 }
 
-const TriMesh& Body::Face3d::getMesh() const
+const TriMeshRef& Body::Face3d::getMesh() const
 {
 	return mMesh;
 }
 
-const Quatf& Body::Face3d::getOrientation() const
+const quat& Body::Face3d::getOrientation() const
 {
 	return mOrientation;
 }
@@ -416,12 +416,12 @@ HandState Body::Hand::getState() const
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 Body::Joint::Joint()
-: mOrientation( Quatf() ), mParentJoint( JointType::JointType_Count ), mPosition( Vec3f::zero() ), 
+: mOrientation( quat() ), mParentJoint( JointType::JointType_Count ), mPosition( vec3( 0.0f ) ), 
 mTrackingState( TrackingState_NotTracked )
 {
 }
 
-Body::Joint::Joint( const Vec3f& position, const Quatf& orientation, TrackingState trackingState,
+Body::Joint::Joint( const vec3& position, const quat& orientation, TrackingState trackingState,
 	JointType parentJoint )
 : mOrientation( orientation ), mPosition( position ), mParentJoint( parentJoint ), 
 mTrackingState( trackingState )
@@ -433,12 +433,12 @@ JointType Body::Joint::getParentJoint() const
 	return mParentJoint;
 }
 
-const Vec3f& Body::Joint::getPosition() const
+const vec3& Body::Joint::getPosition() const
 {
 	return mPosition;
 }
 
-const Quatf& Body::Joint::getOrientation() const
+const quat& Body::Joint::getOrientation() const
 {
 	return mOrientation;
 }
@@ -452,7 +452,7 @@ TrackingState Body::Joint::getTrackingState() const
 
 Body::Body()
 : mEngaged( DetectionResult_Unknown ), mId( 0 ), mIndex( 0 ), 
-mLean( Vec2f::zero() ), mLeanTrackingState( TrackingState_NotTracked ), 
+mLean( vec2( 0.0f ) ), mLeanTrackingState( TrackingState_NotTracked ), 
 mRestricted( false ), mTracked( false )
 {
 	for ( size_t i = 0; i < (size_t)Activity_Count; ++i ) {
@@ -564,7 +564,7 @@ const map<JointType, Body::Joint>& Body::getJointMap() const
 	return mJointMap; 
 }
 
-const Vec2f& Body::getLean() const
+const vec2& Body::getLean() const
 {
 	return mLean;
 }
@@ -600,7 +600,7 @@ long long Frame::getTimeStamp() const
 
 CameraFrame::CameraFrame()
 : mFovDiagonal( 0.0f ), mFovHorizontal( 0.0f ), 
-mFovVertical( 0.0f ), mSize( Vec2i::zero() )
+mFovVertical( 0.0f ), mSize( ivec2( 0 ) )
 {
 }
 
@@ -619,7 +619,7 @@ float CameraFrame::getFovVertical() const
 	return mFovVertical;
 }
 
-const Vec2i& CameraFrame::getSize() const
+const ivec2& CameraFrame::getSize() const
 {
 	return mSize;
 }
@@ -925,72 +925,72 @@ bool Device::isJointTrackingEnabled() const
 	return mEnabledJointTracking;
 }
 
-Vec2i Device::mapCameraToColor( const Vec3f& v ) const
+ivec2 Device::mapCameraToColor( const vec3& v ) const
 {
 	ColorSpacePoint p;
 	KCBMapCameraPointToColorSpace( mKinect, toCameraSpacePoint( v ), &p ); 
-	return Vec2i( toVec2f( p ) );
+	return ivec2( tovec2( p ) );
 }
 
-vector<Vec2i> Device::mapCameraToColor( const vector<Vec3f>& v ) const
+vector<ivec2> Device::mapCameraToColor( const vector<vec3>& v ) const
 {
-	vector<Vec2i> p;
+	vector<ivec2> p;
 	vector<CameraSpacePoint> camera;
 	vector<ColorSpacePoint> color;
-	for_each( v.begin(), v.end(), [ &camera ]( const Vec3f& i )
+	for_each( v.begin(), v.end(), [ &camera ]( const vec3& i )
 	{
 		camera.push_back( toCameraSpacePoint( i ) );
 	} );
 	KCBMapCameraPointsToColorSpace( mKinect, camera.size(), &camera[ 0 ], color.size(), &color[ 0 ] );
 	for_each( color.begin(), color.end(), [ &p ]( const ColorSpacePoint& i )
 	{
-		p.push_back( Vec2i( toVec2f( i ) ) );
+		p.push_back( ivec2( tovec2( i ) ) );
 	} );
 	return p;
 }
 
-Vec2i Device::mapCameraToDepth( const Vec3f& v ) const
+ivec2 Device::mapCameraToDepth( const vec3& v ) const
 {
 	DepthSpacePoint p;
 	KCBMapCameraPointToDepthSpace( mKinect, toCameraSpacePoint( v ), &p ); 
-	return Vec2i( toVec2f( p ) );
+	return ivec2( tovec2( p ) );
 }
 
-vector<Vec2i> Device::mapCameraToDepth( const vector<Vec3f>& v ) const
+vector<ivec2> Device::mapCameraToDepth( const vector<vec3>& v ) const
 {
-	vector<Vec2i> p;
+	vector<ivec2> p;
 	vector<CameraSpacePoint> camera;
 	vector<DepthSpacePoint> depth( v.size() );
-	for_each( v.begin(), v.end(), [ &camera ]( const Vec3f& i )
+	for_each( v.begin(), v.end(), [ &camera ]( const vec3& i )
 	{
 		camera.push_back( toCameraSpacePoint( i ) );
 	} );
 	KCBMapCameraPointsToDepthSpace( mKinect, camera.size(), &camera[ 0 ], depth.size(), &depth[ 0 ] );
 	for_each( depth.begin(), depth.end(), [ &p ]( const DepthSpacePoint& i )
 	{
-		p.push_back( Vec2i( toVec2f( i ) ) );
+		p.push_back( ivec2( tovec2( i ) ) );
 	} );
 	return p;
 }
 
-Vec3f Device::mapDepthToCamera( const Vec2i& v, const Channel16u& depth ) const
+vec3 Device::mapDepthToCamera( const ivec2& v, const Channel16u& depth ) const
 {
 	CameraSpacePoint p;
 	if ( depth ) {
 		uint16_t d = depth.getValue( v );
 		KCBMapDepthPointToCameraSpace( mKinect, toDepthSpacePoint( v ), d, &p ); 
 	}
-	return toVec3f( p );
+	return tovec3( p );
 }
 
-vector<Vec3f> Device::mapDepthToCamera( const vector<Vec2i>& v, const Channel16u& depth ) const
+vector<vec3> Device::mapDepthToCamera( const vector<ivec2>& v, const Channel16u& depth ) const
 {
-	vector<Vec3f> p;
+	vector<vec3> p;
 	if ( depth ) {
 		vector<CameraSpacePoint> camera( v.size() );
 		vector<DepthSpacePoint> depthPos;
 		vector<uint16_t> depthVal;
-		for_each( v.begin(), v.end(), [ &depth, &depthPos, &depthVal ]( const Vec2i& i )
+		for_each( v.begin(), v.end(), [ &depth, &depthPos, &depthVal ]( const ivec2& i )
 		{
 			depthPos.push_back( toDepthSpacePoint( i ) );
 			depthVal.push_back( depth.getValue( i ) );
@@ -998,21 +998,21 @@ vector<Vec3f> Device::mapDepthToCamera( const vector<Vec2i>& v, const Channel16u
 		KCBMapDepthPointsToCameraSpace( mKinect, depthPos.size(), &depthPos[ 0 ], depthPos.size(), &depthVal[ 0 ], camera.size(), &camera[ 0 ] );
 		for_each( camera.begin(), camera.end(), [ &p ]( const CameraSpacePoint& i )
 		{
-			p.push_back( toVec3f( i ) );
+			p.push_back( tovec3( i ) );
 		} );
 	}
 	return p;
 }
 
-vector<Vec3f> Device::mapDepthToCamera( const Channel16u& depth ) const
+vector<vec3> Device::mapDepthToCamera( const Channel16u& depth ) const
 {
-	vector<Vec3f> p;
+	vector<vec3> p;
 	if ( depth ) {
 		vector<CameraSpacePoint> camera( depth.getWidth() * depth.getHeight() );
 		KCBMapDepthFrameToCameraSpace( mKinect, camera.size(), depth.getData(), camera.size(), &camera[ 0 ] );
 		for_each( camera.begin(), camera.end(), [ &p ]( const CameraSpacePoint& i )
 		{
-			p.push_back( toVec3f( i ) );
+			p.push_back( tovec3( i ) );
 		} );
 	}
 	return p;
@@ -1020,7 +1020,7 @@ vector<Vec3f> Device::mapDepthToCamera( const Channel16u& depth ) const
 
 Surface32f Device::mapDepthToCameraTable() const
 {
-	Vec2i sz = DepthFrame().getSize();
+	ivec2 sz = DepthFrame().getSize();
 	Surface32f surface( sz.x, sz.y, false );
 
 	PointF* table	= nullptr;
@@ -1043,38 +1043,38 @@ Surface32f Device::mapDepthToCameraTable() const
 	return surface;
 }
 
-Vec2i Device::mapDepthToColor( const Vec2i& v, const Channel16u& depth ) const
+ivec2 Device::mapDepthToColor( const ivec2& v, const Channel16u& depth ) const
 {
 	ColorSpacePoint p;
 	if ( depth ) {
 		uint16_t d = depth.getValue( v );
 		KCBMapDepthPointToColorSpace( mKinect, toDepthSpacePoint( v ), d, &p ); 
 	}
-	return Vec2i( toVec2f( p ) );
+	return ivec2( tovec2( p ) );
 }
 
-vector<Vec2i> Device::mapDepthToColor( const Channel16u& depth ) const
+vector<ivec2> Device::mapDepthToColor( const Channel16u& depth ) const
 {
-	vector<Vec2i> p;
+	vector<ivec2> p;
 	if ( depth ) {
 		vector<ColorSpacePoint> color( depth.getWidth() * depth.getHeight() );
 		KCBMapDepthFrameToColorSpace( mKinect, color.size(), depth.getData(), color.size(), &color[ 0 ] );
 		for_each( color.begin(), color.end(), [ &p ]( const ColorSpacePoint& i )
 		{
-			p.push_back( Vec2i( toVec2f( i ) ) );
+			p.push_back( ivec2( tovec2( i ) ) );
 		} );
 	}
 	return p;
 }
 
-vector<Vec2i> Device::mapDepthToColor( const vector<Vec2i>& v, const Channel16u& depth ) const
+vector<ivec2> Device::mapDepthToColor( const vector<ivec2>& v, const Channel16u& depth ) const
 {
-	vector<Vec2i> p;
+	vector<ivec2> p;
 	if ( depth ) {
 		vector<ColorSpacePoint> color( v.size() );
 		vector<DepthSpacePoint> depthPos;
 		vector<uint16_t> depthVal;
-		for_each( v.begin(), v.end(), [ &depth, &depthPos, &depthVal ]( const Vec2i& i )
+		for_each( v.begin(), v.end(), [ &depth, &depthPos, &depthVal ]( const ivec2& i )
 		{
 			depthPos.push_back( toDepthSpacePoint( i ) );
 			depthVal.push_back( depth.getValue( i ) );
@@ -1082,7 +1082,7 @@ vector<Vec2i> Device::mapDepthToColor( const vector<Vec2i>& v, const Channel16u&
 		KCBMapDepthPointsToColorSpace( mKinect, depthPos.size(), &depthPos[ 0 ], depthPos.size(), &depthVal[ 0 ], color.size(), &color[ 0 ] );
 		for_each( color.begin(), color.end(), [ &p ]( const ColorSpacePoint& i )
 		{
-			p.push_back( Vec2i( toVec2f( i ) ) );
+			p.push_back( ivec2( tovec2( i ) ) );
 		} );
 	}
 	return p;
@@ -1278,8 +1278,8 @@ void Device::start()
 												}
 
 												Body::Joint joint( 
-													toVec3f( joints[ j ].Position ), 
-													toQuatf( jointOrientations[ j ].Orientation ), 
+													tovec3( joints[ j ].Position ), 
+													toquat( jointOrientations[ j ].Orientation ), 
 													joints[ j ].TrackingState, 
 													parentJoint
 													);
@@ -1293,7 +1293,7 @@ void Device::start()
 										kinectBody->get_LeanTrackingState( &body.mLeanTrackingState );
 										kinectBody->get_TrackingId( &body.mId );
 
-										body.mLean = toVec2f( lean );
+										body.mLean = tovec2( lean );
 										
 										DetectionResult activities[ Activity_Count ];
 										kinectBody->GetActivityDetectionResults( (UINT)Activity_Count, activities );
@@ -1359,7 +1359,7 @@ void Device::start()
 															hr = faceFrameResult->GetFacePointsInColorSpace( FacePointType_Count, facePointsColor );
 															if ( SUCCEEDED( hr ) ) {
 																for ( size_t j = 0; j < (size_t)FacePointType_Count; ++j ) {
-																	body.mFace2d.mPointsColor.push_back( toVec2f( facePointsColor[ j ] ) );
+																	body.mFace2d.mPointsColor.push_back( tovec2( facePointsColor[ j ] ) );
 																}
 															}
 																
@@ -1367,14 +1367,14 @@ void Device::start()
 															hr = faceFrameResult->GetFacePointsInInfraredSpace( FacePointType_Count, facePointsInfrared );
 															if ( SUCCEEDED( hr ) ) {
 																for ( size_t j = 0; j < (size_t)FacePointType_Count; ++j ) {
-																	body.mFace2d.mPointsInfrared.push_back( toVec2f( facePointsInfrared[ j ] ) );
+																	body.mFace2d.mPointsInfrared.push_back( tovec2( facePointsInfrared[ j ] ) );
 																}
 															}
 
 															Vector4 faceRotation;
 															hr = faceFrameResult->get_FaceRotationQuaternion( &faceRotation );
 															if ( SUCCEEDED( hr ) ) {
-																body.mFace2d.mRotation = toQuatf( faceRotation );
+																body.mFace2d.mRotation = toquat( faceRotation );
 															}
 
 															DetectionResult faceProperties[ FaceProperty::FaceProperty_Count ];
@@ -1476,20 +1476,21 @@ void Device::start()
 																	CameraSpacePoint headPivotPoint;
 																	hr = faceAlignment->get_HeadPivotPoint( &headPivotPoint );
 																	if ( SUCCEEDED( hr ) ) {
-																		body.mFace3d.mHeadPivotPoint = toVec3f( headPivotPoint );
+																		body.mFace3d.mHeadPivotPoint = tovec3( headPivotPoint );
 																	}
 
 																	Vector4 faceOrientation;
 																	hr = faceAlignment->get_FaceOrientation( &faceOrientation );
 																	if ( SUCCEEDED( hr ) ) {
-																		body.mFace3d.mOrientation = toQuatf( faceOrientation );
+																		body.mFace3d.mOrientation = toquat( faceOrientation );
 																	}
 
 																	if ( sFaceModelIndexCount > 0 && sFaceModelVertexCount > 0 ) {
 																		hr = faceModel->CalculateVerticesForAlignment( faceAlignment, sFaceModelVertexCount, (CameraSpacePoint*)&mFaceModelVertices[ i ][ 0 ] );
 																		if ( SUCCEEDED( hr ) ) {
-																			body.mFace3d.mMesh.appendIndices( &mFaceModelIndices[ i ][ 0 ], sFaceModelIndexCount );
-																			body.mFace3d.mMesh.appendVertices( &mFaceModelVertices[ i ][ 0 ], sFaceModelVertexCount );
+																			body.mFace3d.mMesh = TriMesh::create( TriMesh::Format().positions() ); 
+																			body.mFace3d.mMesh->appendIndices( &mFaceModelIndices[ i ][ 0 ], sFaceModelIndexCount );
+																			body.mFace3d.mMesh->appendVertices( &mFaceModelVertices[ i ][ 0 ], sFaceModelVertexCount );
 																		}
 																	}
 																	
@@ -1591,7 +1592,7 @@ void Device::start()
 							frame.mFovDiagonal		= frameDescription.diagonalFieldOfView;
 							frame.mFovHorizontal	= frameDescription.horizontalFieldOfView;
 							frame.mFovVertical		= frameDescription.verticalFieldOfView;
-							frame.mSize				= Vec2i( frameDescription.width, frameDescription.height );
+							frame.mSize				= ivec2( frameDescription.width, frameDescription.height );
 							hr = KCBGetIColorFrame( mKinect, &colorFrame );
 							if ( SUCCEEDED( hr ) ) {
 								hr = colorFrame->get_RelativeTime( &timeStamp );
@@ -1638,7 +1639,7 @@ void Device::start()
 							frame.mFovDiagonal		= frameDescription.diagonalFieldOfView;
 							frame.mFovHorizontal	= frameDescription.horizontalFieldOfView;
 							frame.mFovVertical		= frameDescription.verticalFieldOfView;
-							frame.mSize				= Vec2i( frameDescription.width, frameDescription.height );
+							frame.mSize				= ivec2( frameDescription.width, frameDescription.height );
 							hr = KCBGetIDepthFrame( mKinect, &depthFrame );
 							if ( SUCCEEDED( hr ) ) {
 								hr = depthFrame->get_RelativeTime( &timeStamp );
@@ -1721,7 +1722,7 @@ void Device::start()
 					if ( mEventHandlerInfraredLongExposure != nullptr && KCBIsFrameReady( mKinect, FrameSourceTypes_LongExposureInfrared ) ) {
 						InfraredFrame frame;
 						KCBFrameDescription frameDescription;
-						Vec2i sz			= Vec2i::zero();
+						ivec2 sz			= ivec2( 0 );
 						int64_t timeStamp	= 0L;
 		
 						long hr = KCBGetInfraredFrameDescription( mKinect, &frameDescription );

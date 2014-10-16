@@ -37,6 +37,7 @@
 
 #include "cinder/app/AppBasic.h"
 #include "cinder/gl/Texture.h"
+#include "cinder/gl/VboMesh.h"
 #include "cinder/params/Params.h"
 
 #include "Kinect2.h"
@@ -48,21 +49,23 @@
 class FaceApp : public ci::app::AppBasic 
 {
 public:
-	void							draw();
-	void							prepareSettings( ci::app::AppBasic::Settings* settings );
-	void							setup();
-	void							update();
+	void						draw();
+	void						prepareSettings( ci::app::AppBasic::Settings* settings );
+	void						setup();
+	void						update();
 private:
-	std::vector<Kinect2::Body>		mBodies;
-	Kinect2::DeviceRef				mDevice;
-	bool							mEnabledFace2d;
-	bool							mEnabledFace3d;
-	ci::Surface8u					mSurface;
+	std::vector<Kinect2::Body>	mBodies;
+	Kinect2::DeviceRef			mDevice;
+	bool						mEnabledFace2d;
+	bool						mEnabledFace3d;
+	ci::Surface8u				mSurface;
 
-	float							mFrameRate;
-	bool							mFullScreen;
-	ci::params::InterfaceGlRef		mParams;
+	float						mFrameRate;
+	bool						mFullScreen;
+	ci::params::InterfaceGlRef	mParams;
 };
+
+#include "cinder/app/RendererGl.h"
 
 using namespace ci;
 using namespace ci::app;
@@ -70,7 +73,7 @@ using namespace std;
 
 void FaceApp::draw()
 {
-	gl::setViewport( getWindowBounds() );
+	gl::viewport( getWindowSize() );
 	gl::clear();
 	gl::setMatricesWindow( getWindowSize() );
 
@@ -82,7 +85,7 @@ void FaceApp::draw()
 	
 		gl::disable( GL_TEXTURE_2D );
 		gl::pushMatrices();
-		gl::scale( Vec2f( getWindowSize() ) / Vec2f( mSurface.getSize() ) );
+		gl::scale( vec2( getWindowSize() ) / vec2( mSurface.getSize() ) );
 		for ( const Kinect2::Body& body : mBodies ) {
 			if ( body.isTracked() ) {
 
@@ -90,20 +93,34 @@ void FaceApp::draw()
 				const Kinect2::Body::Face3d& face3d = body.getFace3d();
 				if ( face3d.isTracked() ) {
 
-					const TriMesh& mesh = face3d.getMesh();
-					if ( mesh.getNumIndices() > 0 ) {
-						vector<Vec2f> verts;
-						for ( const Vec3f& i : mesh.getVertices() ) {
-							Vec2f v = mDevice->mapCameraToColor( i );
-							verts.push_back( v );
+					const TriMeshRef& mesh = face3d.getMesh();
+					if ( mesh->getNumIndices() > 0 ) {
+						
+						// Map face points to color image
+						vector<vec2> v2;
+						vec3* v3 = mesh->getPositions<3>();
+						for ( size_t i = 0; i < mesh->getNumVertices(); ++i ) {
+							v2.push_back( mDevice->mapCameraToColor( v3[ i ] ) );
 						}
+
+						// Create VBO mesh from TriMesh indices and 2D vertices
+						geom::BufferLayout bufferLayout;
+						bufferLayout.append( geom::Attrib::POSITION, 2, 0, 0 );
+						vector<pair<geom::BufferLayout, gl::VboRef>> vertexArrayBuffers = { 
+							make_pair( bufferLayout, gl::Vbo::create( GL_ARRAY_BUFFER, mesh->getNumVertices() * sizeof( vec2 ), (void*)&v2[ 0 ] ) ) 
+						};
+						gl::VboMeshRef vboMesh = gl::VboMesh::create( 
+							mesh->getNumVertices(), 
+							mesh->getPrimitive(), 
+							vertexArrayBuffers, 
+							mesh->getNumIndices(), 
+							GL_UNSIGNED_INT, 
+							gl::Vbo::create( GL_ELEMENT_ARRAY_BUFFER, mesh->getNumIndices() * sizeof( uint32_t ), (void*)mesh->getIndices().data() ) 
+							);
 
 						gl::lineWidth( 0.5f );
 						gl::enableWireframe();
-						TriMesh2d mesh2d;
-						mesh2d.appendIndices( &mesh.getIndices()[ 0 ], mesh.getNumIndices() );
-						mesh2d.appendVertices( &verts[ 0 ], mesh.getNumVertices() );
-						gl::draw( mesh2d );
+						gl::draw( vboMesh );
 						gl::disableWireframe();
 					}
 				}
@@ -116,7 +133,7 @@ void FaceApp::draw()
 				const Kinect2::Body::Face2d& face2d = body.getFace2d();
 				if ( face2d.isTracked() ) {
 					gl::drawStrokedRect( face2d.getBoundsColor() );
-					for ( const Vec2f& i : face2d.getPointsColor() ) {
+					for ( const vec2& i : face2d.getPointsColor() ) {
 						gl::drawSolidCircle( i, 3.0f, 16 );
 					}
 				}
@@ -154,7 +171,7 @@ void FaceApp::setup()
 		mSurface = frame.getSurface();
 	} );
 		
-	mParams = params::InterfaceGl::create( "Params", Vec2i( 230, 130 ) );
+	mParams = params::InterfaceGl::create( "Params", ivec2( 230, 130 ) );
 	mParams->addParam( "Frame rate",		&mFrameRate,			"", true );
 	mParams->addParam( "Full screen",		&mFullScreen ).key( "f" );
 	mParams->addParam( "2d face tracking",	&mEnabledFace2d ).key( "2" );

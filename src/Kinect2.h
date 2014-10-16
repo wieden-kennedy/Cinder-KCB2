@@ -68,20 +68,20 @@ ci::Color8u												getBodyColor( size_t index );
 size_t													getDeviceCount();
 std::map<size_t, std::string>							getDeviceMap();
 
-CameraSpacePoint										toCameraSpacePoint( const ci::Vec3f& v );
-ColorSpacePoint											toColorSpacePoint( const ci::Vec2f& v );
-DepthSpacePoint											toDepthSpacePoint( const ci::Vec2f& v );
-PointF													toPointF( const ci::Vec2f& v );
-Vector4													toVector4( const ci::Quatf& q );
-Vector4													toVector4( const ci::Vec4f& v );
+CameraSpacePoint										toCameraSpacePoint( const ci::vec3& v );
+ColorSpacePoint											toColorSpacePoint( const ci::vec2& v );
+DepthSpacePoint											toDepthSpacePoint( const ci::vec2& v );
+PointF													toPointF( const ci::vec2& v );
+Vector4													toVector4( const ci::quat& q );
+Vector4													toVector4( const ci::vec4& v );
 
-ci::Quatf												toQuatf( const Vector4& v );
+ci::quat												toQuatf( const Vector4& v );
 ci::Rectf												toRectf( const RectI& v );
-ci::Vec2f												toVec2f( const PointF& v );
-ci::Vec2f												toVec2f( const ColorSpacePoint& v );
-ci::Vec2f												toVec2f( const DepthSpacePoint& v );
-ci::Vec3f												toVec3f( const CameraSpacePoint& v );
-ci::Vec4f												toVec4f( const Vector4& v );
+ci::vec2												toVec2f( const PointF& v );
+ci::vec2												toVec2f( const ColorSpacePoint& v );
+ci::vec2												toVec2f( const DepthSpacePoint& v );
+ci::vec3												toVec3f( const CameraSpacePoint& v );
+ci::vec4												tovec4( const Vector4& v );
 
 std::string												wcharToString( wchar_t* v );
 	
@@ -115,16 +115,16 @@ public:
 		const ci::Rectf&								getBoundsColor() const;
 		const ci::Rectf&								getBoundsInfrared() const;
 		const std::map<FaceProperty, DetectionResult>&	getFaceProperties() const;
-		const std::vector<ci::Vec2f>&					getPointsColor() const;
-		const std::vector<ci::Vec2f>&					getPointsInfrared() const;
-		const ci::Quatf&								getRotation() const;
+		const std::vector<ci::vec2>&					getPointsColor() const;
+		const std::vector<ci::vec2>&					getPointsInfrared() const;
+		const ci::quat&									getRotation() const;
 	protected:
 		ci::Rectf										mBoundsColor;
 		ci::Rectf										mBoundsInfrared;
 		std::map<FaceProperty, DetectionResult>			mFaceProperties;
-		std::vector<ci::Vec2f>							mPointsColor;
-		std::vector<ci::Vec2f>							mPointsInfrared;
-		ci::Quatf										mRotation;
+		std::vector<ci::vec2>							mPointsColor;
+		std::vector<ci::vec2>							mPointsInfrared;
+		ci::quat										mRotation;
 
 		friend class									Device;
 	};
@@ -141,9 +141,9 @@ public:
 		const std::map<FaceShapeAnimations, float>&		getFaceShapeAnimations() const;
 		const std::map<FaceShapeDeformations, float>&	getFaceShapeDeformations() const;
 		const ci::ColorA8u&								getHairColor() const;
-		const ci::Vec3f&								getHeadPivotPoint() const;
-		const ci::TriMesh&								getMesh() const;
-		const ci::Quatf&								getOrientation() const;
+		const ci::vec3&									getHeadPivotPoint() const;
+		const ci::TriMeshRef&							getMesh() const;
+		const ci::quat&									getOrientation() const;
 		float											getScale() const;
 		const ci::ColorA8u&								getSkinColor() const;
 	protected:
@@ -153,9 +153,9 @@ public:
 		FaceAlignmentQuality							mFaceAlignmentQuality;
 		std::map<FaceShapeAnimations, float>			mFaceShapeAnimations;
 		std::map<FaceShapeDeformations, float>			mFaceShapeDeformations;
-		ci::Vec3f										mHeadPivotPoint;
-		ci::TriMesh										mMesh;
-		ci::Quatf										mOrientation;
+		ci::vec3										mHeadPivotPoint;
+		ci::TriMeshRef									mMesh;
+		ci::quat										mOrientation;
 		float											mScale;
 
 		friend class									Device;
@@ -185,17 +185,17 @@ public:
 		Joint();
 		
 		uint64_t										getId() const;
-		const ci::Quatf&								getOrientation() const;
+		const ci::quat&									getOrientation() const;
 		JointType										getParentJoint() const;
-		const ci::Vec3f&								getPosition() const;
+		const ci::vec3&									getPosition() const;
 		TrackingState									getTrackingState() const;
 	protected:
-		Joint( const ci::Vec3f& position, const ci::Quatf& orientation, 
+		Joint( const ci::vec3& position, const ci::quat& orientation, 
 			TrackingState trackingState, JointType parentJoint );
 		
-		ci::Quatf										mOrientation;
+		ci::quat										mOrientation;
 		JointType										mParentJoint;
-		ci::Vec3f										mPosition;
+		ci::vec3										mPosition;
 		TrackingState									mTrackingState;
 
 		friend class									Device;
@@ -217,7 +217,7 @@ public:
 	uint64_t											getId() const;
 	uint8_t												getIndex() const;
 	const std::map<JointType, Body::Joint>&				getJointMap() const;
-	const ci::Vec2f&									getLean() const;
+	const ci::vec2&										getLean() const;
 	TrackingState										getLeanTrackingState() const;
 	DetectionResult										isEngaged() const;
 	bool												isRestricted() const;
@@ -233,7 +233,7 @@ protected:
 	uint64_t											mId;
 	uint8_t												mIndex;
 	std::map<JointType, Body::Joint>					mJointMap;
-	ci::Vec2f											mLean;
+	ci::vec2											mLean;
 	TrackingState										mLeanTrackingState;
 	bool												mRestricted;
 	bool												mTracked;
@@ -265,12 +265,12 @@ public:
 	float												getFovDiagonal() const;
 	float												getFovHorizontal() const;
 	float												getFovVertical() const;
-	const ci::Vec2i&									getSize() const;
+	const ci::ivec2&									getSize() const;
 protected:
 	float												mFovDiagonal;
 	float												mFovHorizontal;
 	float												mFovVertical;
-	ci::Vec2i											mSize;
+	ci::ivec2											mSize;
 
 	friend class										Device;
 };
@@ -463,18 +463,18 @@ public:
 	void												disconnectInfraredEventHandler();
 	void												disconnectInfraredLongExposureEventHandler();
 
-	ci::Vec2i											mapCameraToColor( const ci::Vec3f& v ) const;
-	std::vector<ci::Vec2i>								mapCameraToColor( const std::vector<ci::Vec3f>& v ) const;
-	ci::Vec2i											mapCameraToDepth( const ci::Vec3f& v ) const;
-	std::vector<ci::Vec2i>								mapCameraToDepth( const std::vector<ci::Vec3f>& v ) const;
-	ci::Vec3f											mapDepthToCamera( const ci::Vec2i& v, const ci::Channel16u& depth ) const;
-	std::vector<ci::Vec3f>								mapDepthToCamera( const std::vector<ci::Vec2i>& v, const ci::Channel16u& depth ) const;
-	std::vector<ci::Vec3f>								mapDepthToCamera( const ci::Channel16u& depth ) const;
+	ci::ivec2											mapCameraToColor( const ci::vec3& v ) const;
+	std::vector<ci::ivec2>								mapCameraToColor( const std::vector<ci::vec3>& v ) const;
+	ci::ivec2											mapCameraToDepth( const ci::vec3& v ) const;
+	std::vector<ci::ivec2>								mapCameraToDepth( const std::vector<ci::vec3>& v ) const;
+	ci::vec3											mapDepthToCamera( const ci::ivec2& v, const ci::Channel16u& depth ) const;
+	std::vector<ci::vec3>								mapDepthToCamera( const std::vector<ci::ivec2>& v, const ci::Channel16u& depth ) const;
+	std::vector<ci::vec3>								mapDepthToCamera( const ci::Channel16u& depth ) const;
 	ci::Surface32f										mapDepthToCameraTable() const;
 
-	ci::Vec2i											mapDepthToColor( const ci::Vec2i& v, const ci::Channel16u& depth ) const;
-	std::vector<ci::Vec2i>								mapDepthToColor( const std::vector<ci::Vec2i>& v, const ci::Channel16u& depth ) const;
-	std::vector<ci::Vec2i>								mapDepthToColor( const ci::Channel16u& depth ) const;
+	ci::ivec2											mapDepthToColor( const ci::ivec2& v, const ci::Channel16u& depth ) const;
+	std::vector<ci::ivec2>								mapDepthToColor( const std::vector<ci::ivec2>& v, const ci::Channel16u& depth ) const;
+	std::vector<ci::ivec2>								mapDepthToColor( const ci::Channel16u& depth ) const;
 protected:
 	enum : size_t
 	{
@@ -520,7 +520,7 @@ protected:
 	static uint32_t										sFaceModelIndexCount;
 	std::vector<uint32_t>								mFaceModelIndices[ BODY_COUNT ];
 	static uint32_t										sFaceModelVertexCount;
-	std::vector<ci::Vec3f>								mFaceModelVertices[ BODY_COUNT ];
+	std::vector<ci::vec3>								mFaceModelVertices[ BODY_COUNT ];
 
 	IFaceFrameReader*									mFaceFrameReader2d[ BODY_COUNT ];
 	IFaceFrameSource*									mFaceFrameSource2d[ BODY_COUNT ];

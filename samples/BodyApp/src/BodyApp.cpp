@@ -59,6 +59,7 @@ private:
 	ci::params::InterfaceGlRef	mParams;
 };
 
+#include "cinder/app/RendererGl.h"
 #include "cinder/gl/gl.h"
 #include "cinder/Utilities.h"
 
@@ -68,7 +69,7 @@ using namespace std;
 
 void BodyApp::draw()
 {
-	gl::setViewport( getWindowBounds() );
+	gl::viewport( getWindowSize() );
 	gl::clear( Colorf::black() );
 	gl::color( ColorAf::white() );
 	gl::disableDepthRead();
@@ -87,7 +88,7 @@ void BodyApp::draw()
 		gl::TextureRef tex = gl::Texture::create( Kinect2::colorizeBodyIndex( mChannelBodyIndex ) );
 		gl::draw( tex, tex->getBounds(), Rectf( getWindowBounds() ) );
 
-		auto drawHand = [ & ]( const Kinect2::Body::Hand& hand, const Vec2f& pos ) -> void
+		auto drawHand = [ & ]( const Kinect2::Body::Hand& hand, const vec2& pos ) -> void
 		{
 			switch ( hand.getState() ) {
 			case HandState_Closed:
@@ -107,16 +108,16 @@ void BodyApp::draw()
 		};
 
 		gl::pushMatrices();
-		gl::scale( Vec2f( getWindowSize() ) / Vec2f( mChannelBodyIndex.getSize() ) );
+		gl::scale( vec2( getWindowSize() ) / vec2( mChannelBodyIndex.getSize() ) );
 		gl::disable( GL_TEXTURE_2D );
 		for ( const Kinect2::Body& body : mBodyFrame.getBodies() ) {
 			if ( body.isTracked() ) {
 				gl::color( ColorAf::white() );
 				for ( const auto& joint : body.getJointMap() ) {
 					if ( joint.second.getTrackingState() == TrackingState::TrackingState_Tracked ) {
-						Vec2f pos( mDevice->mapCameraToDepth( joint.second.getPosition() ) );
+						vec2 pos( mDevice->mapCameraToDepth( joint.second.getPosition() ) );
 						gl::drawSolidCircle( pos, 5.0f, 32 );
-						Vec2f parent( mDevice->mapCameraToDepth(
+						vec2 parent( mDevice->mapCameraToDepth(
 							body.getJointMap().at( joint.second.getParentJoint() ).getPosition()
 							) );
 						gl::drawLine( pos, parent );
@@ -158,7 +159,7 @@ void BodyApp::setup()
 		mChannelDepth = frame.getChannel();
 	} );
 	
-	mParams = params::InterfaceGl::create( "Params", Vec2i( 200, 100 ) );
+	mParams = params::InterfaceGl::create( "Params", ivec2( 200, 100 ) );
 	mParams->addParam( "Frame rate",	&mFrameRate,			"", true );
 	mParams->addParam( "Full screen",	&mFullScreen ).key( "f" );
 	mParams->addButton( "Quit",			[ & ]() { quit(); },	"key=q" );

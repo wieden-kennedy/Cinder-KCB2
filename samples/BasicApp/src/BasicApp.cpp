@@ -60,20 +60,22 @@ private:
 	ci::params::InterfaceGlRef	mParams;
 };
 
+#include "cinder/app/RendererGl.h"
+
 using namespace ci;
 using namespace ci::app;
 using namespace std;
 
 void BasicApp::draw()
 {
-	gl::setViewport( getWindowBounds() );
+	gl::viewport( getWindowSize() );
 	gl::clear();
 	gl::setMatricesWindow( getWindowSize() );
 	gl::enableAlphaBlending();
 	
 	if ( mSurfaceColor ) {
 		gl::TextureRef tex = gl::Texture::create( mSurfaceColor );
-		gl::draw( tex, tex->getBounds(), Rectf( Vec2f::zero(), getWindowCenter() ) );
+		gl::draw( tex, tex->getBounds(), Rectf( vec2( 0.0f ), getWindowCenter() ) );
 	}
 	if ( mChannelDepth ) {
 		gl::TextureRef tex = gl::Texture::create( Kinect2::channel16To8( mChannelDepth ) );
@@ -85,7 +87,7 @@ void BasicApp::draw()
 	}
 	if ( mChannelBodyIndex ) {
 		gl::TextureRef tex = gl::Texture::create( Kinect2::colorizeBodyIndex( mChannelBodyIndex ) );
-		gl::draw( tex, tex->getBounds(), Rectf( getWindowCenter(), Vec2f( getWindowSize() ) ) );
+		gl::draw( tex, tex->getBounds(), Rectf( getWindowCenter(), getWindowSize() ) );
 	}
 
 	mParams->draw();
@@ -123,7 +125,7 @@ void BasicApp::setup()
 		mChannelInfrared = frame.getChannel();
 	} );
 	
-	mParams = params::InterfaceGl::create( "Params", Vec2i( 200, 100 ) );
+	mParams = params::InterfaceGl::create( "Params", ivec2( 200, 100 ) );
 	mParams->addParam( "Frame rate",	&mFrameRate,			"", true );
 	mParams->addParam( "Full screen",	&mFullScreen ).key( "f" );
 	mParams->addButton( "Quit",			[ & ]() { quit(); } ,	"key=q" );
