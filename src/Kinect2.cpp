@@ -973,31 +973,6 @@ vector<Vec2i> Device::mapCameraToDepth( const vector<Vec3f>& v ) const
 	return p;
 }
 
-Surface32f Device::mapDepthToCamera() const
-{
-	Vec2i sz = DepthFrame().getSize();
-	Surface32f surface( sz.x, sz.y, false );
-
-	PointF* table	= nullptr;
-	uint32_t count	= 0;
-	long hr			= GetDepthFrameToCameraSpaceTable( mKinect, &count, &table );
-	if ( SUCCEEDED( hr ) ) {
-		Surface32f::Iter iter = surface.getIter();
-		
-		size_t i = 0;
-		while ( iter.line() ) {
-			while ( iter.pixel() ) {
-				iter.r() = table[ i ].X;
-				iter.g() = table[ i ].Y;
-				iter.b() = 1.0f;
-				++i;
-			}
-		}
-	}
-
-	return surface;
-}
-
 Vec3f Device::mapDepthToCamera( const Vec2i& v, const Channel16u& depth ) const
 {
 	CameraSpacePoint p;
@@ -1041,6 +1016,31 @@ vector<Vec3f> Device::mapDepthToCamera( const Channel16u& depth ) const
 		} );
 	}
 	return p;
+}
+
+Surface32f Device::mapDepthToCameraTable() const
+{
+	Vec2i sz = DepthFrame().getSize();
+	Surface32f surface( sz.x, sz.y, false );
+
+	PointF* table	= nullptr;
+	uint32_t count	= 0;
+	long hr			= GetDepthFrameToCameraSpaceTable( mKinect, &count, &table );
+	if ( SUCCEEDED( hr ) ) {
+		Surface32f::Iter iter = surface.getIter();
+		
+		size_t i = 0;
+		while ( iter.line() ) {
+			while ( iter.pixel() ) {
+				iter.r() = table[ i ].X;
+				iter.g() = table[ i ].Y;
+				iter.b() = 1.0f;
+				++i;
+			}
+		}
+	}
+
+	return surface;
 }
 
 Vec2i Device::mapDepthToColor( const Vec2i& v, const Channel16u& depth ) const
