@@ -41,6 +41,10 @@
 
 #include "Kinect2.h"
 
+// NOTE There is a memory leak in the Kinect SDK 1409 and lower 
+//		when the model vertices are generated. Please do not use
+//		this feature in production until this issue is resolved.
+
 class FaceApp : public ci::app::AppBasic 
 {
 public:
