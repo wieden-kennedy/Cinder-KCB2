@@ -774,14 +774,14 @@ Device::Device()
 	}
 	
 	for ( size_t i = 0; i < BODY_COUNT; ++i ) {
-		mFaceModelIndices[ i ]	= new uint32_t[ sFaceModelIndexCount ];
-		mFaceModelVertices[ i ] = new CameraSpacePoint[ sFaceModelVertexCount ];
+		mFaceModelIndices[ i ].resize( sFaceModelIndexCount );
+		mFaceModelVertices[ i ].resize( sFaceModelVertexCount );
 		mFaceFrameSource2d[ i ] = nullptr;
 		mFaceFrameReader2d[ i ] = nullptr;
 		mFaceFrameSource3d[ i ] = nullptr;
 		mFaceFrameReader3d[ i ] = nullptr;
 
-		GetFaceModelTriangles( sFaceModelIndexCount, mFaceModelIndices[ i ] );
+		GetFaceModelTriangles( sFaceModelIndexCount, &mFaceModelIndices[ i ][ 0 ] );
 	}
 
 	App::get()->getSignalUpdate().connect( bind( &Device::update, this ) );
@@ -792,8 +792,6 @@ Device::~Device()
 	stop();
 
 	for ( size_t i = 0; i < BODY_COUNT; ++i ) {
-		delete [] mFaceModelIndices[ i ];
-		delete [] mFaceModelVertices[ i ];
 		if ( mFaceFrameSource2d[ i ] != nullptr ) {
 			mFaceFrameSource2d[ i ]->Release();
 			mFaceFrameSource2d[ i ] = nullptr;
@@ -973,6 +971,31 @@ vector<Vec2i> Device::mapCameraToDepth( const vector<Vec3f>& v ) const
 		p.push_back( Vec2i( toVec2f( i ) ) );
 	} );
 	return p;
+}
+
+Surface32f Device::mapDepthToCamera() const
+{
+	Vec2i sz = DepthFrame().getSize();
+	Surface32f surface( sz.x, sz.y, false );
+
+	PointF* table	= nullptr;
+	uint32_t count	= 0;
+	long hr			= GetDepthFrameToCameraSpaceTable( mKinect, &count, &table );
+	if ( SUCCEEDED( hr ) ) {
+		Surface32f::Iter iter = surface.getIter();
+		
+		size_t i = 0;
+		while ( iter.line() ) {
+			while ( iter.pixel() ) {
+				iter.r() = table[ i ].X;
+				iter.g() = table[ i ].Y;
+				iter.b() = 1.0f;
+				++i;
+			}
+		}
+	}
+
+	return surface;
 }
 
 Vec3f Device::mapDepthToCamera( const Vec2i& v, const Channel16u& depth ) const
@@ -1463,10 +1486,10 @@ void Device::start()
 																	}
 
 																	if ( sFaceModelIndexCount > 0 && sFaceModelVertexCount > 0 ) {
-																		hr = faceModel->CalculateVerticesForAlignment( faceAlignment, sFaceModelVertexCount, mFaceModelVertices[ i ] );
+																		hr = faceModel->CalculateVerticesForAlignment( faceAlignment, sFaceModelVertexCount, (CameraSpacePoint*)&mFaceModelVertices[ i ][ 0 ] );
 																		if ( SUCCEEDED( hr ) ) {
 																			body.mFace3d.mMesh.appendIndices( &mFaceModelIndices[ i ][ 0 ], sFaceModelIndexCount );
-																			body.mFace3d.mMesh.appendVertices( reinterpret_cast<Vec3f*>( mFaceModelVertices[ i ] ), sFaceModelVertexCount );
+																			body.mFace3d.mMesh.appendVertices( &mFaceModelVertices[ i ][ 0 ], sFaceModelVertexCount );
 																		}
 																	}
 																	
@@ -1492,7 +1515,7 @@ void Device::start()
 									frame.mBodies.push_back( body );
 								}
 							}
-							frame.mTimeStamp	= static_cast<long long>( timeStamp );
+							frame.mTimeStamp = static_cast<long long>( timeStamp );
 						}
 						if ( frame.getTimeStamp() > mFrameBody.getTimeStamp() ) {
 							mFrameBody			= frame;

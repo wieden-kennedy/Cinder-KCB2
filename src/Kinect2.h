@@ -467,9 +467,11 @@ public:
 	std::vector<ci::Vec2i>								mapCameraToColor( const std::vector<ci::Vec3f>& v ) const;
 	ci::Vec2i											mapCameraToDepth( const ci::Vec3f& v ) const;
 	std::vector<ci::Vec2i>								mapCameraToDepth( const std::vector<ci::Vec3f>& v ) const;
+	ci::Surface32f										mapDepthToCamera() const;
 	ci::Vec3f											mapDepthToCamera( const ci::Vec2i& v, const ci::Channel16u& depth ) const;
 	std::vector<ci::Vec3f>								mapDepthToCamera( const std::vector<ci::Vec2i>& v, const ci::Channel16u& depth ) const;
 	std::vector<ci::Vec3f>								mapDepthToCamera( const ci::Channel16u& depth ) const;
+
 	ci::Vec2i											mapDepthToColor( const ci::Vec2i& v, const ci::Channel16u& depth ) const;
 	std::vector<ci::Vec2i>								mapDepthToColor( const std::vector<ci::Vec2i>& v, const ci::Channel16u& depth ) const;
 	std::vector<ci::Vec2i>								mapDepthToColor( const ci::Channel16u& depth ) const;
@@ -516,9 +518,9 @@ protected:
 	bool												mEnabledJointTracking;
 
 	static uint32_t										sFaceModelIndexCount;
+	std::vector<uint32_t>								mFaceModelIndices[ BODY_COUNT ];
 	static uint32_t										sFaceModelVertexCount;
-	uint32_t*											mFaceModelIndices[ BODY_COUNT ];
-	CameraSpacePoint*									mFaceModelVertices[ BODY_COUNT ];
+	std::vector<ci::Vec3f>								mFaceModelVertices[ BODY_COUNT ];
 
 	IFaceFrameReader*									mFaceFrameReader2d[ BODY_COUNT ];
 	IFaceFrameSource*									mFaceFrameSource2d[ BODY_COUNT ];
