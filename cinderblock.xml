@@ -23,7 +23,6 @@
 		<staticLibrary absolute="true">$(KINECTSDK20_DIR)/lib/x86/Kinect20.Face.lib</staticLibrary>
         <buildCopy>lib/x86/KCBv2.dll</buildCopy>
 		<buildCopy absolute="true">$(KINECTSDK20_DIR)Redist\Face\$(PlatformTarget)\Kinect20.Face.dll</buildCopy>
-		<buildCopy absolute="true">$(KINECTSDK20_DIR)Redist\Face\$(PlatformTarget)\NuiDatabase</buildCopy>
     </platform>
 </block>
 <template>templates/Basic KCB2/template.xml</template>
