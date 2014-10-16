@@ -7,7 +7,7 @@
     license="BSD"
     summary="Kinect v2 Common Bridge block for Cinder"
     git="git@github.com:wieden-kennedy/Cinder-KCB2.git"
-    version="0.2"
+    version="0.3"
     libraryUrl="www.libcinder.org"
     >
 

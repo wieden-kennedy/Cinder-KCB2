@@ -51,7 +51,9 @@ public:
 private:
 	std::vector<Kinect2::Body>		mBodies;
 	Kinect2::DeviceRef				mDevice;
-	ci::Surface8u					mSurfaceColor;
+	bool							mEnabledFace2d;
+	bool							mEnabledFace3d;
+	ci::Surface8u					mSurface;
 
 	float							mFrameRate;
 	bool							mFullScreen;
@@ -68,26 +70,19 @@ void FaceApp::draw()
 	gl::clear();
 	gl::setMatricesWindow( getWindowSize() );
 
-	if ( mSurfaceColor ) {	
-		gl::color( ColorAf::white() );
+	if ( mSurface ) {	
+		gl::color( Colorf::white() );
 		gl::enable( GL_TEXTURE_2D );
-		gl::TextureRef tex = gl::Texture::create( mSurfaceColor );
+		gl::TextureRef tex = gl::Texture::create( mSurface );
 		gl::draw( tex, tex->getBounds(), Rectf( getWindowBounds() ) );
 	
 		gl::disable( GL_TEXTURE_2D );
 		gl::pushMatrices();
-		gl::scale( Vec2f( getWindowSize() ) / Vec2f( mSurfaceColor.getSize() ) );
+		gl::scale( Vec2f( getWindowSize() ) / Vec2f( mSurface.getSize() ) );
 		for ( const Kinect2::Body& body : mBodies ) {
 			if ( body.isTracked() ) {
 
-				const Kinect2::Body::Face2d& face2d = body.getFace2d();
-				if ( face2d.isTracked() ) {
-					gl::drawStrokedRect( face2d.getBoundsColor() );
-					for ( const Vec2f& i : face2d.getPointsColor() ) {
-						gl::drawSolidCircle( i, 3.0f, 16 );
-					}
-				}
-
+				gl::color( Colorf::white() );
 				const Kinect2::Body::Face3d& face3d = body.getFace3d();
 				if ( face3d.isTracked() ) {
 
@@ -99,12 +94,26 @@ void FaceApp::draw()
 							verts.push_back( v );
 						}
 
+						gl::lineWidth( 0.5f );
 						gl::enableWireframe();
 						TriMesh2d mesh2d;
 						mesh2d.appendIndices( &mesh.getIndices()[ 0 ], mesh.getNumIndices() );
 						mesh2d.appendVertices( &verts[ 0 ], mesh.getNumVertices() );
 						gl::draw( mesh2d );
 						gl::disableWireframe();
+					}
+				}
+
+				if ( mEnabledFace3d ) {
+					gl::color( Colorf( 1.0f, 0.0f, 0.0f ) );
+				} else {
+					gl::lineWidth( 2.0f );
+				}
+				const Kinect2::Body::Face2d& face2d = body.getFace2d();
+				if ( face2d.isTracked() ) {
+					gl::drawStrokedRect( face2d.getBoundsColor() );
+					for ( const Vec2f& i : face2d.getPointsColor() ) {
+						gl::drawSolidCircle( i, 3.0f, 16 );
 					}
 				}
 			}
@@ -125,12 +134,12 @@ void FaceApp::setup()
 {	
 	gl::enableAlphaBlending();
 	
-	mFrameRate	= 0.0f;
-	mFullScreen	= false;
+	mEnabledFace2d	= true;
+	mEnabledFace3d	= true;
+	mFrameRate		= 0.0f;
+	mFullScreen		= false;
 
 	mDevice = Kinect2::Device::create();
-	//mDevice->enableFaceTracking2d();
-	mDevice->enableFaceTracking3d();
 	mDevice->start();
 	mDevice->connectBodyEventHandler( [ & ]( const Kinect2::BodyFrame& frame )
 	{
@@ -138,19 +147,24 @@ void FaceApp::setup()
 	} );
 	mDevice->connectColorEventHandler( [ & ]( const Kinect2::ColorFrame frame )
 	{
-		mSurfaceColor = frame.getSurface();
+		mSurface = frame.getSurface();
 	} );
 		
-	mParams = params::InterfaceGl::create( "Params", Vec2i( 200, 100 ) );
-	mParams->addParam( "Frame rate",	&mFrameRate,			"", true );
-	mParams->addParam( "Full screen",	&mFullScreen ).key( "f" );
-	mParams->addButton( "Quit",			[ & ]() { quit(); } ,	"key=q" );
+	mParams = params::InterfaceGl::create( "Params", Vec2i( 230, 130 ) );
+	mParams->addParam( "Frame rate",		&mFrameRate,			"", true );
+	mParams->addParam( "Full screen",		&mFullScreen ).key( "f" );
+	mParams->addParam( "2d face tracking",	&mEnabledFace2d ).key( "2" );
+	mParams->addParam( "3d face tracking",	&mEnabledFace3d ).key( "3" );
+	mParams->addButton( "Quit",				[ & ]() { quit(); } ,	"key=q" );
 }
 
 void FaceApp::update()
 {
 	mFrameRate = getAverageFps();
 	
+	mDevice->enableFaceTracking2d( mEnabledFace2d );
+	mDevice->enableFaceTracking3d( mEnabledFace3d );
+
 	if ( mFullScreen != isFullScreen() ) {
 		setFullScreen( mFullScreen );
 		mFullScreen = isFullScreen();
