@@ -91,8 +91,7 @@ void FaceApp::draw()
 
 				gl::color( Colorf::white() );
 				const Kinect2::Body::Face3d& face3d = body.getFace3d();
-				if ( face3d.isTracked() ) {
-
+				if ( face3d.getMesh() ) {
 					const TriMeshRef& mesh = face3d.getMesh();
 					if ( mesh->getNumIndices() > 0 ) {
 						
@@ -185,6 +184,7 @@ void FaceApp::update()
 	
 	mDevice->enableFaceTracking2d( mEnabledFace2d );
 	mDevice->enableFaceTracking3d( mEnabledFace3d );
+	mDevice->enableFaceMesh( mEnabledFace3d );
 
 	if ( mFullScreen != isFullScreen() ) {
 		setFullScreen( mFullScreen );

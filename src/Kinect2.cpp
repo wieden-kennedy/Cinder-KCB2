@@ -757,13 +757,13 @@ DeviceRef Device::create()
 }
 
 Device::Device()
-	: mEnabledFaceTracking2d( false ), mEnabledFaceTracking3d( false ), 
-	mEnabledHandTracking( false ), mEnabledJointTracking( true ), 
-	mEventHandlerAudio( nullptr ), mEventHandlerBody( nullptr ), 
-	mEventHandlerBodyIndex( nullptr ), mEventHandlerColor( nullptr ), 
-	mEventHandlerDepth( nullptr ), mEventHandlerInfrared( nullptr ), 
-	mEventHandlerInfraredLongExposure( nullptr ), mKinect( KCB_INVALID_HANDLE ), 
-	mSensor( nullptr )
+	: mEnabledFaceMesh( false ), mEnabledFaceTracking2d( false ), 
+	mEnabledFaceTracking3d( false ), mEnabledHandTracking( false ), 
+	mEnabledJointTracking( true ), mEventHandlerAudio( nullptr ), 
+	mEventHandlerBody( nullptr ), mEventHandlerBodyIndex( nullptr ), 
+	mEventHandlerColor( nullptr ), mEventHandlerDepth( nullptr ), 
+	mEventHandlerInfrared( nullptr ), mEventHandlerInfraredLongExposure( nullptr ), 
+	mKinect( KCB_INVALID_HANDLE ), mSensor( nullptr )
 {
 	if ( sFaceModelIndexCount == 0 ) {
 		GetFaceModelTriangleCount( &sFaceModelIndexCount );
@@ -885,6 +885,11 @@ void Device::disconnectInfraredLongExposureEventHandler()
 	mEventHandlerInfraredLongExposure = nullptr;
 }
 
+void Device::enableFaceMesh( bool enable )
+{
+	mEnabledFaceMesh = enable;
+}
+
 void Device::enableFaceTracking2d( bool enable )
 {
 	mEnabledFaceTracking2d = enable;
@@ -903,6 +908,11 @@ void Device::enableHandTracking( bool enable )
 void Device::enableJointTracking( bool enable )
 {
 	mEnabledJointTracking = enable;
+}
+
+bool Device::isFaceMeshEnabled() const
+{
+	return mEnabledFaceMesh;
 }
 
 bool Device::isFaceTrackingEnabled2d() const
@@ -1485,7 +1495,7 @@ void Device::start()
 																		body.mFace3d.mOrientation = toquat( faceOrientation );
 																	}
 
-																	if ( sFaceModelIndexCount > 0 && sFaceModelVertexCount > 0 ) {
+																	if ( mEnabledFaceMesh && sFaceModelIndexCount > 0 && sFaceModelVertexCount > 0 ) {
 																		hr = faceModel->CalculateVerticesForAlignment( faceAlignment, sFaceModelVertexCount, (CameraSpacePoint*)&mFaceModelVertices[ i ][ 0 ] );
 																		if ( SUCCEEDED( hr ) ) {
 																			body.mFace3d.mMesh = TriMesh::create( TriMesh::Format().positions() ); 
