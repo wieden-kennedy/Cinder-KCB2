@@ -168,6 +168,7 @@ void FaceApp::update()
 	
 	mDevice->enableFaceTracking2d( mEnabledFace2d );
 	mDevice->enableFaceTracking3d( mEnabledFace3d );
+	mDevice->enableFaceMesh( mEnabledFace3d );
 
 	if ( mFullScreen != isFullScreen() ) {
 		setFullScreen( mFullScreen );

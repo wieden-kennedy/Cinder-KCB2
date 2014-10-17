@@ -396,10 +396,12 @@ public:
 	void												start();
 	void												stop();
 
+	void												enableFaceMesh( bool enable = true );
 	void												enableFaceTracking2d( bool enable = true );
 	void												enableFaceTracking3d( bool enable = true );
 	void												enableHandTracking( bool enable = true );
 	void												enableJointTracking( bool enable = true );
+	bool												isFaceMeshEnabled() const;
 	bool												isFaceTrackingEnabled2d() const;
 	bool												isFaceTrackingEnabled3d() const;
 	bool												isHandTrackingEnabled() const;
@@ -512,6 +514,7 @@ protected:
 	InfraredFrame										mFrameInfrared;
 	InfraredFrame										mFrameInfraredLongExposure;
 
+	bool												mEnabledFaceMesh;
 	bool												mEnabledFaceTracking2d;
 	bool												mEnabledFaceTracking3d;
 	bool												mEnabledHandTracking;
