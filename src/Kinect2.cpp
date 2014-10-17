@@ -1116,7 +1116,7 @@ void Device::start()
 			process.mThreadCallback = [ & ]()
 			{
 				while ( process.mRunning ) {
-					if ( process.mNewData || mKinect == KCB_INVALID_HANDLE ) {
+					if (process.mNewData || mKinect == KCB_INVALID_HANDLE || mEventHandlerAudio == nullptr) {
 						this_thread::sleep_for( chrono::milliseconds( kThreadSleepDuration ) );
 						continue;
 					}
@@ -1155,7 +1155,7 @@ void Device::start()
 			process.mThreadCallback = [ & ]()
 			{
 				while ( process.mRunning ) {
-					if ( process.mNewData ) {
+					if (process.mNewData || mEventHandlerBody == nullptr) {
 						this_thread::sleep_for( chrono::milliseconds( kThreadSleepDuration ) );
 						continue;
 					}
@@ -1529,7 +1529,7 @@ void Device::start()
 			process.mThreadCallback = [ & ]()
 			{
 				while ( process.mRunning ) {
-					if ( process.mNewData || mKinect == KCB_INVALID_HANDLE ) {
+					if (process.mNewData || mKinect == KCB_INVALID_HANDLE || mEventHandlerBodyIndex == nullptr) {
 						this_thread::sleep_for( chrono::milliseconds( kThreadSleepDuration ) );
 						continue;
 					}
@@ -1574,7 +1574,7 @@ void Device::start()
 			process.mThreadCallback = [ & ]()
 			{
 				while ( process.mRunning ) {
-					if ( process.mNewData || mKinect == KCB_INVALID_HANDLE ) {
+					if (process.mNewData || mKinect == KCB_INVALID_HANDLE || mEventHandlerColor == nullptr) {
 						this_thread::sleep_for( chrono::milliseconds( kThreadSleepDuration ) );
 						continue;
 					}
@@ -1621,7 +1621,7 @@ void Device::start()
 			process.mThreadCallback = [ & ]()
 			{
 				while ( process.mRunning ) {
-					if ( process.mNewData || mKinect == KCB_INVALID_HANDLE ) {
+					if (process.mNewData || mKinect == KCB_INVALID_HANDLE || mEventHandlerDepth == nullptr) {
 						this_thread::sleep_for( chrono::milliseconds( kThreadSleepDuration ) );
 						continue;
 					}
@@ -1668,7 +1668,7 @@ void Device::start()
 			process.mThreadCallback = [ & ]()
 			{
 				while ( process.mRunning ) {
-					if ( process.mNewData || mKinect == KCB_INVALID_HANDLE ) {
+					if (process.mNewData || mKinect == KCB_INVALID_HANDLE || mEventHandlerInfrared == nullptr) {
 						this_thread::sleep_for( chrono::milliseconds( kThreadSleepDuration ) );
 						continue;
 					}
@@ -1713,7 +1713,7 @@ void Device::start()
 			process.mThreadCallback = [ & ]()
 			{
 				while ( process.mRunning ) {
-					if ( process.mNewData || mKinect == KCB_INVALID_HANDLE ) {
+					if (process.mNewData || mKinect == KCB_INVALID_HANDLE || mEventHandlerInfraredLongExposure == nullptr) {
 						this_thread::sleep_for( chrono::milliseconds( kThreadSleepDuration ) );
 						continue;
 					}
