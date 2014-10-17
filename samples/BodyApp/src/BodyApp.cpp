@@ -88,7 +88,7 @@ void BodyApp::draw()
 		gl::TextureRef tex = gl::Texture::create( Kinect2::colorizeBodyIndex( mChannelBodyIndex ) );
 		gl::draw( tex, tex->getBounds(), Rectf( getWindowBounds() ) );
 
-		auto drawHand = [ & ]( const Kinect2::Body::Hand& hand, const vec2& pos ) -> void
+		auto drawHand = [ & ]( const Kinect2::Body::Hand& hand, const ivec2& pos ) -> void
 		{
 			switch ( hand.getState() ) {
 			case HandState_Closed:

@@ -37,35 +37,32 @@
 
 #include "cinder/app/AppBasic.h"
 #include "cinder/gl/Texture.h"
-#include "cinder/gl/VboMesh.h"
 #include "cinder/params/Params.h"
 
 #include "Kinect2.h"
 
-// NOTE There is a memory leak in the Kinect SDK 1409 and lower 
-//		when the model vertices are generated. Please do not use
-//		this feature in production until this issue is resolved.
-
 class FaceApp : public ci::app::AppBasic 
 {
 public:
-	void						draw();
-	void						prepareSettings( ci::app::AppBasic::Settings* settings );
-	void						setup();
-	void						update();
+	void							draw();
+	void							prepareSettings( ci::app::AppBasic::Settings* settings );
+	void							setup();
+	void							update();
 private:
-	std::vector<Kinect2::Body>	mBodies;
-	Kinect2::DeviceRef			mDevice;
-	bool						mEnabledFace2d;
-	bool						mEnabledFace3d;
-	ci::Surface8u				mSurface;
+	Kinect2::DeviceRef				mDevice;
+	bool							mEnabledFace2d;
+	bool							mEnabledFace3d;
+	std::vector<Kinect2::Face2d>	mFaces2d;
+	std::vector<Kinect2::Face3d>	mFaces3d;
+	ci::Surface8u					mSurface;
 
-	float						mFrameRate;
-	bool						mFullScreen;
-	ci::params::InterfaceGlRef	mParams;
+	float							mFrameRate;
+	bool							mFullScreen;
+	ci::params::InterfaceGlRef		mParams;
 };
 
 #include "cinder/app/RendererGl.h"
+#include "cinder/gl/VboMesh.h"
 
 using namespace ci;
 using namespace ci::app;
@@ -86,55 +83,50 @@ void FaceApp::draw()
 		gl::disable( GL_TEXTURE_2D );
 		gl::pushMatrices();
 		gl::scale( vec2( getWindowSize() ) / vec2( mSurface.getSize() ) );
-		for ( const Kinect2::Body& body : mBodies ) {
-			if ( body.isTracked() ) {
-
-				gl::color( Colorf::white() );
-				const Kinect2::Body::Face3d& face3d = body.getFace3d();
-				if ( face3d.getMesh() ) {
-					const TriMeshRef& mesh = face3d.getMesh();
-					if ( mesh->getNumIndices() > 0 ) {
+		
+		for ( const Kinect2::Face3d& face : mFaces3d ) {
+			const TriMeshRef& mesh = face.getMesh();
+			if ( mesh && mesh->getNumIndices() > 0 ) {
 						
-						// Map face points to color image
-						vector<vec2> v2;
-						vec3* v3 = mesh->getPositions<3>();
-						for ( size_t i = 0; i < mesh->getNumVertices(); ++i ) {
-							v2.push_back( mDevice->mapCameraToColor( v3[ i ] ) );
-						}
-
-						// Create VBO mesh from TriMesh indices and 2D vertices
-						geom::BufferLayout bufferLayout;
-						bufferLayout.append( geom::Attrib::POSITION, 2, 0, 0 );
-						vector<pair<geom::BufferLayout, gl::VboRef>> vertexArrayBuffers = { 
-							make_pair( bufferLayout, gl::Vbo::create( GL_ARRAY_BUFFER, mesh->getNumVertices() * sizeof( vec2 ), (void*)&v2[ 0 ] ) ) 
-						};
-						gl::VboMeshRef vboMesh = gl::VboMesh::create( 
-							mesh->getNumVertices(), 
-							mesh->getPrimitive(), 
-							vertexArrayBuffers, 
-							mesh->getNumIndices(), 
-							GL_UNSIGNED_INT, 
-							gl::Vbo::create( GL_ELEMENT_ARRAY_BUFFER, mesh->getNumIndices() * sizeof( uint32_t ), (void*)mesh->getIndices().data() ) 
-							);
-
-						gl::lineWidth( 0.5f );
-						gl::enableWireframe();
-						gl::draw( vboMesh );
-						gl::disableWireframe();
-					}
+				// Map face points to color image
+				vector<vec2> v2;
+				vec3* v3 = mesh->getPositions<3>();
+				for ( size_t i = 0; i < mesh->getNumVertices(); ++i ) {
+					v2.push_back( mDevice->mapCameraToColor( v3[ i ] ) );
 				}
 
-				if ( mEnabledFace3d ) {
-					gl::color( Colorf( 1.0f, 0.0f, 0.0f ) );
-				} else {
-					gl::lineWidth( 2.0f );
-				}
-				const Kinect2::Body::Face2d& face2d = body.getFace2d();
-				if ( face2d.isTracked() ) {
-					gl::drawStrokedRect( face2d.getBoundsColor() );
-					for ( const vec2& i : face2d.getPointsColor() ) {
-						gl::drawSolidCircle( i, 3.0f, 16 );
-					}
+				// Create VBO mesh from TriMesh indices and 2D vertices
+				geom::BufferLayout bufferLayout;
+				bufferLayout.append( geom::Attrib::POSITION, 2, 0, 0 );
+				vector<pair<geom::BufferLayout, gl::VboRef>> vertexArrayBuffers = { 
+					make_pair( bufferLayout, gl::Vbo::create( GL_ARRAY_BUFFER, mesh->getNumVertices() * sizeof( vec2 ), (void*)&v2[ 0 ] ) ) 
+				};
+				gl::VboMeshRef vboMesh = gl::VboMesh::create( 
+					mesh->getNumVertices(), 
+					mesh->getPrimitive(), 
+					vertexArrayBuffers, 
+					mesh->getNumIndices(), 
+					GL_UNSIGNED_INT, 
+					gl::Vbo::create( GL_ELEMENT_ARRAY_BUFFER, mesh->getNumIndices() * sizeof( uint32_t ), (void*)mesh->getIndices().data() ) 
+					);
+
+				gl::lineWidth( 0.5f );
+				gl::enableWireframe();
+				gl::draw( vboMesh );
+				gl::disableWireframe();
+			}
+		}
+		
+		if ( mEnabledFace3d ) {
+			gl::color( Colorf( 1.0f, 0.0f, 0.0f ) );
+		} else {
+			gl::lineWidth( 2.0f );
+		}
+		for ( const Kinect2::Face2d& face : mFaces2d ) {
+			if ( face.isTracked() ) {
+				gl::drawStrokedRect( face.getBoundsColor() );
+				for ( const vec2& i : face.getPointsColor() ) {
+					gl::drawSolidCircle( i, 3.0f, 16 );
 				}
 			}
 		}
@@ -161,9 +153,9 @@ void FaceApp::setup()
 
 	mDevice = Kinect2::Device::create();
 	mDevice->start();
-	mDevice->connectBodyEventHandler( [ & ]( const Kinect2::BodyFrame& frame )
+	mDevice->enableFaceMesh();
+	mDevice->connectBodyEventHandler( [ & ]( const Kinect2::BodyFrame frame )
 	{
-		mBodies = frame.getBodies();
 	} );
 	mDevice->connectColorEventHandler( [ & ]( const Kinect2::ColorFrame frame )
 	{
@@ -182,9 +174,30 @@ void FaceApp::update()
 {
 	mFrameRate = getAverageFps();
 	
-	mDevice->enableFaceTracking2d( mEnabledFace2d );
-	mDevice->enableFaceTracking3d( mEnabledFace3d );
-	mDevice->enableFaceMesh( mEnabledFace3d );
+	// Toggles streams by connecting and disconnecting events
+	if ( mEnabledFace2d && !mDevice->isFace2dEventHandlerConnected() ) {
+		mDevice->connectFace2dEventHandler( [ & ]( const Kinect2::Face2dFrame& frame )
+		{
+			if ( !frame.getFaces().empty() ) {
+				mFaces2d = frame.getFaces();
+			}
+		} );
+	} else if ( !mEnabledFace2d && mDevice->isFace2dEventHandlerConnected() ) {
+		mDevice->disconnectFace2dEventHandler();
+		mFaces2d.clear();
+	}
+
+	if ( mEnabledFace3d && !mDevice->isFace3dEventHandlerConnected() ) {
+		mDevice->connectFace3dEventHandler( [ & ]( const Kinect2::Face3dFrame& frame )
+		{
+			if ( !frame.getFaces().empty() ) {
+				mFaces3d = frame.getFaces();
+			}
+		} );
+	} else if ( !mEnabledFace3d && mDevice->isFace3dEventHandlerConnected() ) {
+		mDevice->disconnectFace3dEventHandler();
+		mFaces3d.clear();
+	}
 
 	if ( mFullScreen != isFullScreen() ) {
 		setFullScreen( mFullScreen );

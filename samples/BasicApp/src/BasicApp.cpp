@@ -87,7 +87,7 @@ void BasicApp::draw()
 	}
 	if ( mChannelBodyIndex ) {
 		gl::TextureRef tex = gl::Texture::create( Kinect2::colorizeBodyIndex( mChannelBodyIndex ) );
-		gl::draw( tex, tex->getBounds(), Rectf( getWindowCenter(), getWindowSize() ) );
+		gl::draw( tex, tex->getBounds(), Rectf( getWindowCenter(), vec2( getWindowSize() ) ) );
 	}
 
 	mParams->draw();
