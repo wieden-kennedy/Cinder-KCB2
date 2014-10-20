@@ -13,6 +13,8 @@ private:
 	Kinect2::DeviceRef mDevice;
 };
 
+#include "cinder/app/RendererGl.h"
+
 void _TBOX_PREFIX_App::draw()
 {
 	if ( mChannel ) {
