@@ -18,12 +18,21 @@
     <includePath absolute="true">$(KINECTSDK20_DIR)/inc</includePath>
     
     <platform os="msw">
-        <staticLibrary>lib/x86/KCBv2.lib</staticLibrary>
-        <staticLibrary absolute="true">$(KINECTSDK20_DIR)/lib/x86/kinect20.lib</staticLibrary>
-		<staticLibrary absolute="true">$(KINECTSDK20_DIR)/lib/x86/Kinect20.Face.lib</staticLibrary>
-        <buildCopy>lib/x86/KCBv2.dll</buildCopy>
-		<buildCopy absolute="true">$(KINECTSDK20_DIR)Redist\Face\$(PlatformTarget)\Kinect20.Face.dll</buildCopy>
-    </platform>
+		<platform config="debug">
+			<staticLibrary>lib/$(PlatformTarget)/$(Configuration)/KCBv2.lib</staticLibrary>
+			<staticLibrary absolute="true">$(KINECTSDK20_DIR)/lib/$(PlatformTarget)/kinect20.lib</staticLibrary>
+			<staticLibrary absolute="true">$(KINECTSDK20_DIR)/lib/$(PlatformTarget)/Kinect20.Face.lib</staticLibrary>
+			<buildCopy>lib/$(PlatformTarget)/$(Configuration)/KCBv2.dll</buildCopy>
+			<buildCopy absolute="true">$(KINECTSDK20_DIR)Redist\Face\$(PlatformTarget)\Kinect20.Face.dll</buildCopy>
+		</platform>
+		<platform config="release">
+			<staticLibrary>lib/$(PlatformTarget)/KCBv2.lib</staticLibrary>
+			<staticLibrary absolute="true">$(KINECTSDK20_DIR)/lib/$(PlatformTarget)/kinect20.lib</staticLibrary>
+			<staticLibrary absolute="true">$(KINECTSDK20_DIR)/lib/$(PlatformTarget)/Kinect20.Face.lib</staticLibrary>
+			<buildCopy>lib/$(PlatformTarget)/KCBv2.dll</buildCopy>
+			<buildCopy absolute="true">$(KINECTSDK20_DIR)Redist\Face\$(PlatformTarget)\Kinect20.Face.dll</buildCopy>
+		</platform>
+	</platform>
 </block>
 <template>templates/Basic KCB2/template.xml</template>
 </cinder>
