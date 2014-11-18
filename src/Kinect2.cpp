@@ -699,6 +699,7 @@ template class ChannelFrameT<uint16_t>;
 ColorFrame::ColorFrame()
 : CameraFrame(), Frame()
 {
+	mSize = ivec2( 1920, 1080 );
 }
 
 const Surface8u& ColorFrame::getSurface() const
@@ -711,6 +712,7 @@ const Surface8u& ColorFrame::getSurface() const
 DepthFrame::DepthFrame()
 : CameraFrame(), ChannelFrame16u()
 {
+	mSize = ivec2( 512, 424 );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
@@ -1074,7 +1076,7 @@ vector<vec3> Device::mapDepthToCamera( const Channel16u& depth ) const
 Surface32f Device::mapDepthToCameraTable() const
 {
 	ivec2 sz = DepthFrame().getSize();
-	Surface32f surface( sz.x, sz.y, false );
+	Surface32f surface( sz.x, sz.y, false, SurfaceChannelOrder::RGB );
 
 	PointF* table	= nullptr;
 	uint32_t count	= 0;
@@ -1087,7 +1089,7 @@ Surface32f Device::mapDepthToCameraTable() const
 			while ( iter.pixel() ) {
 				iter.r() = table[ i ].X;
 				iter.g() = table[ i ].Y;
-				iter.b() = 1.0f;
+				iter.b() = 0.0f;
 				++i;
 			}
 		}
