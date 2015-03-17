@@ -35,7 +35,7 @@
 * 
 */
 
-#include "cinder/app/AppBasic.h"
+#include "cinder/app/App.h"
 #include "cinder/MayaCamUI.h"
 #include "cinder/gl/GlslProg.h"
 #include "cinder/gl/Texture.h"
@@ -44,21 +44,20 @@
 
 #include "Kinect2.h"
 
-class PointCloudApp : public ci::app::AppBasic 
+class PointCloudApp : public ci::app::App
 {
 public:
 	void						draw() override;
 	void 						mouseDrag( ci::app::MouseEvent event ) override;
-	void						prepareSettings( ci::app::AppBasic::Settings* settings ) override;
 	void						resize() override;
 	void						setup() override;
 	void						update() override;
 private:
-	ci::Channel16u				mChannelDepth;
+	ci::Channel16uRef			mChannelDepth;
 	Kinect2::DeviceRef			mDevice;
-	ci::Surface8u				mSurfaceColor;
-	ci::Surface32f				mSurfaceDepthToCameraTable;
-	ci::Surface32f				mSurfaceDepthToColorTable;
+	ci::Surface8uRef			mSurfaceColor;
+	ci::Surface32fRef			mSurfaceDepthToCameraTable;
+	ci::Surface32fRef			mSurfaceDepthToColorTable;
 	long long					mTimeStamp;
 	long long					mTimeStampPrev;
 
@@ -94,9 +93,9 @@ void PointCloudApp::draw()
 	
 	if ( mSurfaceColor ) {
 		if ( mTextureColor ) {
-			mTextureColor->update( mSurfaceColor );
+			mTextureColor->update( *mSurfaceColor );
 		} else {
-			mTextureColor = gl::Texture::create( mSurfaceColor );
+			mTextureColor = gl::Texture::create( *mSurfaceColor );
 		}
 		mTextureColor->bind( 0 );
 	}
@@ -105,24 +104,24 @@ void PointCloudApp::draw()
 			gl::ScopedTextureBind scopeTextureBind( mTextureDepth->getTarget(), mTextureDepth->getId() );
 			glTexSubImage2D( mTextureDepth->getTarget(), 0, 0, 0,
 				mTextureDepth->getWidth(), mTextureDepth->getHeight(),
-				GL_RED_INTEGER,	GL_UNSIGNED_SHORT, mChannelDepth.getData() );
+				GL_RED_INTEGER,	GL_UNSIGNED_SHORT, mChannelDepth->getData() );
 		} else {
 			mTextureDepth = gl::Texture::create( 
-				mChannelDepth.getWidth(), mChannelDepth.getHeight(), 
+				mChannelDepth->getWidth(), mChannelDepth->getHeight(), 
 				gl::Texture::Format().dataType( GL_UNSIGNED_SHORT ).internalFormat( GL_R16UI ) );
 		}
 		mTextureDepth->bind( 1 );
 	}
 	if ( mSurfaceDepthToCameraTable && !mTextureDepthToCameraTable ) {
-		mTextureDepthToCameraTable = gl::Texture::create( mSurfaceDepthToCameraTable );
+		mTextureDepthToCameraTable = gl::Texture::create( *mSurfaceDepthToCameraTable );
 		mTextureDepthToCameraTable->bind( 2 );
 	}
 	if ( mSurfaceDepthToColorTable ) {
 		if ( mTextureDepthToColorTable ) {
-			mTextureDepthToColorTable->update( mSurfaceDepthToColorTable );
+			mTextureDepthToColorTable->update( *mSurfaceDepthToColorTable );
 		} else {
 			mTextureDepthToColorTable = gl::Texture::create( 
-				mSurfaceDepthToColorTable,
+				*mSurfaceDepthToColorTable,
 				gl::Texture::Format().dataType( GL_FLOAT ) );
 		}
 		mTextureDepthToColorTable->bind( 3 );
@@ -176,12 +175,6 @@ void PointCloudApp::mouseDrag( MouseEvent event )
 	bool middle = event.isMiddleDown()	|| ( event.isMetaDown()		&& event.isLeftDown() );
 	bool right	= event.isRightDown()	|| ( event.isControlDown()	&& event.isLeftDown() );
 	mMayaCam.mouseDrag( event.getPos(), event.isLeftDown() && !middle && !right, middle, right );
-}
-
-void PointCloudApp::prepareSettings( Settings* settings )
-{
-	settings->prepareWindow( Window::Format().size( 1280, 960 ).title( "Point Cloud App" ) );
-	settings->setFrameRate( 60.0f );
 }
 
 void PointCloudApp::resize()
@@ -261,12 +254,12 @@ void PointCloudApp::update()
 	if ( ( mTimeStamp != mTimeStampPrev ) && mSurfaceColor && mChannelDepth ) {
 		mTimeStampPrev = mTimeStamp;
 
-		mSurfaceDepthToColorTable	= Surface32f( mChannelDepth.getWidth(), mChannelDepth.getHeight(), false, SurfaceChannelOrder::RGB );
+		mSurfaceDepthToColorTable	= Surface32f::create( mChannelDepth->getWidth(), mChannelDepth->getHeight(), false, SurfaceChannelOrder::RGB );
 		vector<ivec2> positions		= mDevice->mapDepthToColor( mChannelDepth );
 
 		vec2 sz( Kinect2::ColorFrame().getSize() );
 
-		Surface32f::Iter iter		= mSurfaceDepthToColorTable.getIter();
+		Surface32f::Iter iter		= mSurfaceDepthToColorTable->getIter();
 		vector<ivec2>::iterator v	= positions.begin();
 		while ( iter.line() ) {
 			while ( iter.pixel() ) {
@@ -279,5 +272,9 @@ void PointCloudApp::update()
 	}
 }
 
-CINDER_APP_BASIC( PointCloudApp, RendererGl( RendererGl::Options().coreProfile() ) )
-	
+CINDER_APP( PointCloudApp, RendererGl( RendererGl::Options().coreProfile() ), []( App::Settings* settings )
+{
+	settings->prepareWindow( Window::Format().size( 1280, 960 ).title( "Point Cloud App" ) );
+	settings->setFrameRate( 60.0f );
+} )
+ 

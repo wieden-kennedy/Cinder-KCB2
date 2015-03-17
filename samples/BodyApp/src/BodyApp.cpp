@@ -1,6 +1,6 @@
 /*
 * 
-* Copyright (c) 2014, Wieden+Kennedy
+* Copyright (c) 2015, Wieden+Kennedy
 * Stephen Schieberl, Michael Latzoni
 * All rights reserved.
 * 
@@ -35,23 +35,22 @@
 * 
 */
 
-#include "cinder/app/AppBasic.h"
+#include "cinder/app/App.h"
 #include "cinder/gl/Texture.h"
 #include "cinder/params/Params.h"
 
 #include "Kinect2.h"
 
-class BodyApp : public ci::app::AppBasic
+class BodyApp : public ci::app::App
 {
 public:
-	void						draw();
-	void						prepareSettings( ci::app::AppBasic::Settings* settings );
-	void						setup();
-	void						update();
+	void						draw() override;
+	void						setup() override;
+	void						update() override;
 private:
 	Kinect2::BodyFrame			mBodyFrame;
-	ci::Channel8u				mChannelBodyIndex;
-	ci::Channel16u				mChannelDepth;
+	ci::Channel8uRef			mChannelBodyIndex;
+	ci::Channel16uRef			mChannelDepth;
 	Kinect2::DeviceRef			mDevice;
 
 	float						mFrameRate;
@@ -78,14 +77,14 @@ void BodyApp::draw()
 
 	if ( mChannelDepth ) {
 		gl::enable( GL_TEXTURE_2D );
-		gl::TextureRef tex = gl::Texture::create( Kinect2::channel16To8( mChannelDepth ) );
+		gl::TextureRef tex = gl::Texture::create( *Kinect2::channel16To8( mChannelDepth ) );
 		gl::draw( tex, tex->getBounds(), Rectf( getWindowBounds() ) );
 	}
 
 	if ( mChannelBodyIndex ) {
 		gl::enable( GL_TEXTURE_2D );
 		gl::color( ColorAf( Colorf::white(), 0.15f ) );
-		gl::TextureRef tex = gl::Texture::create( Kinect2::colorizeBodyIndex( mChannelBodyIndex ) );
+		gl::TextureRef tex = gl::Texture::create( *Kinect2::colorizeBodyIndex( mChannelBodyIndex ) );
 		gl::draw( tex, tex->getBounds(), Rectf( getWindowBounds() ) );
 
 		auto drawHand = [ & ]( const Kinect2::Body::Hand& hand, const ivec2& pos ) -> void
@@ -108,7 +107,7 @@ void BodyApp::draw()
 		};
 
 		gl::pushMatrices();
-		gl::scale( vec2( getWindowSize() ) / vec2( mChannelBodyIndex.getSize() ) );
+		gl::scale( vec2( getWindowSize() ) / vec2( mChannelBodyIndex->getSize() ) );
 		gl::disable( GL_TEXTURE_2D );
 		for ( const Kinect2::Body& body : mBodyFrame.getBodies() ) {
 			if ( body.isTracked() ) {
@@ -131,12 +130,6 @@ void BodyApp::draw()
 	}
 
 	mParams->draw();
-}
-
-void BodyApp::prepareSettings( Settings* settings )
-{
-	settings->prepareWindow( Window::Format().size( 1024, 768 ).title( "Body App" ) );
-	settings->setFrameRate( 60.0f );
 }
 
 void BodyApp::setup()
@@ -176,4 +169,8 @@ void BodyApp::update()
 	}
 }
 
-CINDER_APP_BASIC( BodyApp, RendererGl )
+CINDER_APP( BodyApp, RendererGl, []( App::Settings* settings )
+{
+	settings->prepareWindow( Window::Format().size( 1024, 768 ).title( "Body App" ) );
+	settings->setFrameRate( 60.0f );
+} )

@@ -61,8 +61,8 @@ namespace Kinect2 {
 
 class Device;
 
-ci::Channel8u										channel16To8( const ci::Channel16u& channel, uint8_t bytes = 4 );
-ci::Surface8u										colorizeBodyIndex( const ci::Channel8u& bodyIndexChannel );
+ci::Channel8uRef									channel16To8( const ci::Channel16uRef& channel, uint8_t bytes = 4 );
+ci::Surface8uRef									colorizeBodyIndex( const ci::Channel8uRef& bodyIndexChannel );
 
 ci::Color8u											getBodyColor( size_t index );
 size_t												getDeviceCount();
@@ -320,9 +320,9 @@ class ChannelFrameT : public Frame
 public:
 	ChannelFrameT();
 
-	const ci::ChannelT<T>&								getChannel() const;
+	const std::shared_ptr<ci::ChannelT<T> >&			getChannel() const;
 protected:
-	ci::ChannelT<T>										mChannel;
+	std::shared_ptr<ci::ChannelT<T> >					mChannel;
 
 	friend class										Device;
 };
@@ -337,9 +337,9 @@ class ColorFrame : public CameraFrame, public Frame
 public:
 	ColorFrame();
 
-	const ci::Surface8u&								getSurface() const;
+	const ci::Surface8uRef&								getSurface() const;
 protected:
-	ci::Surface8u										mSurface;
+	ci::Surface8uRef									mSurface;
 
 	friend class										Device;
 };
@@ -519,13 +519,13 @@ public:
 	std::vector<ci::ivec2>								mapCameraToColor( const std::vector<ci::vec3>& v ) const;
 	ci::ivec2											mapCameraToDepth( const ci::vec3& v ) const;
 	std::vector<ci::ivec2>								mapCameraToDepth( const std::vector<ci::vec3>& v ) const;
-	ci::vec3											mapDepthToCamera( const ci::ivec2& v, const ci::Channel16u& depth ) const;
-	std::vector<ci::vec3>								mapDepthToCamera( const std::vector<ci::ivec2>& v, const ci::Channel16u& depth ) const;
-	std::vector<ci::vec3>								mapDepthToCamera( const ci::Channel16u& depth ) const;
-	ci::Surface32f										mapDepthToCameraTable() const;
-	ci::ivec2											mapDepthToColor( const ci::ivec2& v, const ci::Channel16u& depth ) const;
-	std::vector<ci::ivec2>								mapDepthToColor( const std::vector<ci::ivec2>& v, const ci::Channel16u& depth ) const;
-	std::vector<ci::ivec2>								mapDepthToColor( const ci::Channel16u& depth ) const;
+	ci::vec3											mapDepthToCamera( const ci::ivec2& v, const ci::Channel16uRef& depth ) const;
+	std::vector<ci::vec3>								mapDepthToCamera( const std::vector<ci::ivec2>& v, const ci::Channel16uRef& depth ) const;
+	std::vector<ci::vec3>								mapDepthToCamera( const ci::Channel16uRef& depth ) const;
+	ci::Surface32fRef									mapDepthToCameraTable() const;
+	ci::ivec2											mapDepthToColor( const ci::ivec2& v, const ci::Channel16uRef& depth ) const;
+	std::vector<ci::ivec2>								mapDepthToColor( const std::vector<ci::ivec2>& v, const ci::Channel16uRef& depth ) const;
+	std::vector<ci::ivec2>								mapDepthToColor( const ci::Channel16uRef& depth ) const;
 protected:
 	enum : size_t
 	{

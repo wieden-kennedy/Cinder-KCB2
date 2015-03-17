@@ -1,6 +1,6 @@
 /*
 * 
-* Copyright (c) 2014, Wieden+Kennedy
+* Copyright (c) 2015, Wieden+Kennedy
 * Stephen Schieberl
 * All rights reserved.
 * 
@@ -35,25 +35,25 @@
 * 
 */
 
-#include "cinder/app/AppBasic.h"
+#include "cinder/app/App.h"
+#include "cinder/gl/Pbo.h"
 #include "cinder/gl/Texture.h"
 #include "cinder/params/Params.h"
 
 #include "Kinect2.h"
 
-class BasicApp : public ci::app::AppBasic 
+class BasicApp : public ci::app::App 
 {
 public:
-	void						draw();
-	void						prepareSettings( ci::app::AppBasic::Settings* settings );
-	void						setup();
-	void						update();
+	void						draw() override;
+	void						setup() override;
+	void						update() override;
 private:
 	Kinect2::DeviceRef			mDevice;
-	ci::Channel8u				mChannelBodyIndex;
-	ci::Channel16u				mChannelDepth;
-	ci::Channel16u				mChannelInfrared;
-	ci::Surface8u				mSurfaceColor;
+	ci::Channel8uRef			mChannelBodyIndex;
+	ci::Channel16uRef			mChannelDepth;
+	ci::Channel16uRef			mChannelInfrared;
+	ci::Surface8uRef			mSurfaceColor;
 
 	float						mFrameRate;
 	bool						mFullScreen;
@@ -74,29 +74,23 @@ void BasicApp::draw()
 	gl::enableAlphaBlending();
 	
 	if ( mSurfaceColor ) {
-		gl::TextureRef tex = gl::Texture::create( mSurfaceColor );
+		gl::TextureRef tex = gl::Texture::create( *mSurfaceColor );
 		gl::draw( tex, tex->getBounds(), Rectf( vec2( 0.0f ), getWindowCenter() ) );
 	}
 	if ( mChannelDepth ) {
-		gl::TextureRef tex = gl::Texture::create( Kinect2::channel16To8( mChannelDepth ) );
+		gl::TextureRef tex = gl::Texture::create( *Kinect2::channel16To8( mChannelDepth ) );
 		gl::draw( tex, tex->getBounds(), Rectf( getWindowCenter().x, 0.0f, (float)getWindowWidth(), getWindowCenter().y ) );
 	}
 	if ( mChannelInfrared ) {
-		gl::TextureRef tex = gl::Texture::create( mChannelInfrared );
+		gl::TextureRef tex = gl::Texture::create( *mChannelInfrared );
 		gl::draw( tex, tex->getBounds(), Rectf( 0.0f, getWindowCenter().y, getWindowCenter().x, (float)getWindowHeight() ) );
 	}
 	if ( mChannelBodyIndex ) {
-		gl::TextureRef tex = gl::Texture::create( Kinect2::colorizeBodyIndex( mChannelBodyIndex ) );
+		gl::TextureRef tex = gl::Texture::create( *Kinect2::colorizeBodyIndex( mChannelBodyIndex ) );
 		gl::draw( tex, tex->getBounds(), Rectf( getWindowCenter(), vec2( getWindowSize() ) ) );
 	}
 
 	mParams->draw();
-}
-
-void BasicApp::prepareSettings( Settings* settings )
-{
-	settings->prepareWindow( Window::Format().size( 800, 600 ).title( "Basic App" ) );
-	settings->setFrameRate( 60.0f );
 }
 
 void BasicApp::setup()
@@ -141,5 +135,9 @@ void BasicApp::update()
 	}
 }
 
-CINDER_APP_BASIC( BasicApp, RendererGl )
+CINDER_APP( BasicApp, RendererGl, []( App::Settings* settings )
+{
+	settings->prepareWindow( Window::Format().size( 800, 600 ).title( "Basic App" ) );
+	settings->setFrameRate( 60.0f );
+} )
 	

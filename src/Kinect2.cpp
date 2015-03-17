@@ -1,6 +1,6 @@
 /*
 * 
-* Copyright (c) 2014, Wieden+Kennedy
+* Copyright (c) 2015, Wieden+Kennedy
 * Stephen Schieberl
 * All rights reserved.
 * 
@@ -59,13 +59,13 @@ static const unsigned long kFaceFrameFeatures =
 	FaceFrameFeatures::FaceFrameFeatures_Glasses					| 
 	FaceFrameFeatures::FaceFrameFeatures_FaceEngagement;
 
-Channel8u channel16To8( const Channel16u& channel, uint8_t bytes )
+Channel8uRef channel16To8( const Channel16uRef& channel, uint8_t bytes )
 {
-	Channel8u channel8;
+	Channel8uRef channel8;
 	if ( channel ) {
-		channel8						= Channel8u( channel.getWidth(), channel.getHeight() );
-		Channel16u::ConstIter iter16	= channel.getIter();
-		Channel8u::Iter iter8			= channel8.getIter();
+		channel8				= Channel8u::create( channel->getWidth(), channel->getHeight() );
+		Channel16u::Iter iter16	= channel->getIter();
+		Channel8u::Iter iter8	= channel8->getIter();
 		while ( iter8.line() && iter16.line() ) {
 			while ( iter8.pixel() && iter16.pixel() ) {
 				iter8.v()				= static_cast<uint8_t>( iter16.v() >> bytes );
@@ -75,24 +75,24 @@ Channel8u channel16To8( const Channel16u& channel, uint8_t bytes )
 	return channel8;
 }
 
-Surface8u colorizeBodyIndex( const Channel8u& bodyIndexChannel )
+Surface8uRef colorizeBodyIndex( const Channel8uRef& bodyIndexChannel )
 {
-	Surface8u surface;
+	Surface8uRef surface;
 	if ( bodyIndexChannel ) {
-		surface = Surface8u( bodyIndexChannel.getWidth(), bodyIndexChannel.getHeight(), true, SurfaceChannelOrder::RGBA );
-		Channel8u::ConstIter iterChannel	= bodyIndexChannel.getIter();
-		Surface8u::Iter iterSurface			= surface.getIter();
+		surface = Surface8u::create( bodyIndexChannel->getWidth(), bodyIndexChannel->getHeight(), true, SurfaceChannelOrder::RGBA );
+		Channel8u::Iter iterChannel	= bodyIndexChannel->getIter();
+		Surface8u::Iter iterSurface	= surface->getIter();
 		while ( iterChannel.line() && iterSurface.line() ) {
 			while ( iterChannel.pixel() && iterSurface.pixel() ) {
 				size_t index				= (size_t)iterChannel.v();
 				ColorA8u color( getBodyColor( index ), 0xFF );
 				if ( index == 0 || index > BODY_COUNT ) {
-					color.a					= 0x00;
+					color.a		= 0x00;
 				}
-				iterSurface.r()				= color.r;
-				iterSurface.g()				= color.g;
-				iterSurface.b()				= color.b;
-				iterSurface.a()				= color.a;
+				iterSurface.r()	= color.r;
+				iterSurface.g()	= color.g;
+				iterSurface.b()	= color.b;
+				iterSurface.a()	= color.a;
 			}
 		}
 	}
@@ -686,7 +686,7 @@ ChannelFrameT<T>::ChannelFrameT()
 }
 
 template<typename T> 
-const ChannelT<T>& ChannelFrameT<T>::getChannel() const
+const std::shared_ptr<ChannelT<T> >& ChannelFrameT<T>::getChannel() const
 {
 	return mChannel;
 }
@@ -702,7 +702,7 @@ ColorFrame::ColorFrame()
 	mSize = ivec2( 1920, 1080 );
 }
 
-const Surface8u& ColorFrame::getSurface() const
+const Surface8uRef& ColorFrame::getSurface() const
 {
 	return mSurface;
 }
@@ -1028,17 +1028,17 @@ vector<ivec2> Device::mapCameraToDepth( const vector<vec3>& v ) const
 	return p;
 }
 
-vec3 Device::mapDepthToCamera( const ivec2& v, const Channel16u& depth ) const
+vec3 Device::mapDepthToCamera( const ivec2& v, const Channel16uRef& depth ) const
 {
 	CameraSpacePoint p;
 	if ( depth ) {
-		uint16_t d = depth.getValue( v );
+		uint16_t d = depth->getValue( v );
 		KCBMapDepthPointToCameraSpace( mKinect, toDepthSpacePoint( v ), d, &p ); 
 	}
 	return toVec3( p );
 }
 
-vector<vec3> Device::mapDepthToCamera( const vector<ivec2>& v, const Channel16u& depth ) const
+vector<vec3> Device::mapDepthToCamera( const vector<ivec2>& v, const Channel16uRef& depth ) const
 {
 	vector<vec3> p;
 	if ( depth ) {
@@ -1048,7 +1048,7 @@ vector<vec3> Device::mapDepthToCamera( const vector<ivec2>& v, const Channel16u&
 		for_each( v.begin(), v.end(), [ &depth, &depthPos, &depthVal ]( const ivec2& i )
 		{
 			depthPos.push_back( toDepthSpacePoint( i ) );
-			depthVal.push_back( depth.getValue( i ) );
+			depthVal.push_back( depth->getValue( i ) );
 		} );
 		KCBMapDepthPointsToCameraSpace( mKinect, depthPos.size(), &depthPos[ 0 ], depthPos.size(), &depthVal[ 0 ], camera.size(), &camera[ 0 ] );
 		for_each( camera.begin(), camera.end(), [ &p ]( const CameraSpacePoint& i )
@@ -1059,12 +1059,12 @@ vector<vec3> Device::mapDepthToCamera( const vector<ivec2>& v, const Channel16u&
 	return p;
 }
 
-vector<vec3> Device::mapDepthToCamera( const Channel16u& depth ) const
+vector<vec3> Device::mapDepthToCamera( const Channel16uRef& depth ) const
 {
 	vector<vec3> p;
 	if ( depth ) {
-		vector<CameraSpacePoint> camera( depth.getWidth() * depth.getHeight() );
-		KCBMapDepthFrameToCameraSpace( mKinect, camera.size(), depth.getData(), camera.size(), &camera[ 0 ] );
+		vector<CameraSpacePoint> camera( depth->getWidth() * depth->getHeight() );
+		KCBMapDepthFrameToCameraSpace( mKinect, camera.size(), depth->getData(), camera.size(), &camera[ 0 ] );
 		for_each( camera.begin(), camera.end(), [ &p ]( const CameraSpacePoint& i )
 		{
 			p.push_back( toVec3( i ) );
@@ -1073,17 +1073,17 @@ vector<vec3> Device::mapDepthToCamera( const Channel16u& depth ) const
 	return p;
 }
 
-Surface32f Device::mapDepthToCameraTable() const
+Surface32fRef Device::mapDepthToCameraTable() const
 {
 	ivec2 sz = DepthFrame().getSize();
-	Surface32f surface( sz.x, sz.y, false, SurfaceChannelOrder::RGB );
+	Surface32fRef surface = Surface32f::create( sz.x, sz.y, false, SurfaceChannelOrder::RGB );
 
 	PointF* table	= nullptr;
 	uint32_t count	= 0;
 	long hr			= GetDepthFrameToCameraSpaceTable( mKinect, &count, &table );
 	if ( SUCCEEDED( hr ) ) {
-		Surface32f::Iter iter = surface.getIter();
-		
+		Surface32f::Iter iter = surface->getIter();
+
 		size_t i = 0;
 		while ( iter.line() ) {
 			while ( iter.pixel() ) {
@@ -1098,22 +1098,22 @@ Surface32f Device::mapDepthToCameraTable() const
 	return surface;
 }
 
-ivec2 Device::mapDepthToColor( const ivec2& v, const Channel16u& depth ) const
+ivec2 Device::mapDepthToColor( const ivec2& v, const Channel16uRef& depth ) const
 {
 	ColorSpacePoint p;
 	if ( depth ) {
-		uint16_t d = depth.getValue( v );
+		uint16_t d = depth->getValue( v );
 		KCBMapDepthPointToColorSpace( mKinect, toDepthSpacePoint( v ), d, &p ); 
 	}
 	return ivec2( toVec2( p ) );
 }
 
-vector<ivec2> Device::mapDepthToColor( const Channel16u& depth ) const
+vector<ivec2> Device::mapDepthToColor( const Channel16uRef& depth ) const
 {
 	vector<ivec2> p;
 	if ( depth ) {
-		vector<ColorSpacePoint> color( depth.getWidth() * depth.getHeight() );
-		KCBMapDepthFrameToColorSpace( mKinect, color.size(), depth.getData(), color.size(), &color[ 0 ] );
+		vector<ColorSpacePoint> color( depth->getWidth() * depth->getHeight() );
+		KCBMapDepthFrameToColorSpace( mKinect, color.size(), depth->getData(), color.size(), &color[ 0 ] );
 		for_each( color.begin(), color.end(), [ &p ]( const ColorSpacePoint& i )
 		{
 			p.push_back( ivec2( toVec2( i ) ) );
@@ -1122,7 +1122,7 @@ vector<ivec2> Device::mapDepthToColor( const Channel16u& depth ) const
 	return p;
 }
 
-vector<ivec2> Device::mapDepthToColor( const vector<ivec2>& v, const Channel16u& depth ) const
+vector<ivec2> Device::mapDepthToColor( const vector<ivec2>& v, const Channel16uRef& depth ) const
 {
 	vector<ivec2> p;
 	if ( depth ) {
@@ -1132,7 +1132,7 @@ vector<ivec2> Device::mapDepthToColor( const vector<ivec2>& v, const Channel16u&
 		for_each( v.begin(), v.end(), [ &depth, &depthPos, &depthVal ]( const ivec2& i )
 		{
 			depthPos.push_back( toDepthSpacePoint( i ) );
-			depthVal.push_back( depth.getValue( i ) );
+			depthVal.push_back( depth->getValue( i ) );
 		} );
 		KCBMapDepthPointsToColorSpace( mKinect, depthPos.size(), &depthPos[ 0 ], depthPos.size(), &depthVal[ 0 ], color.size(), &color[ 0 ] );
 		for_each( color.begin(), color.end(), [ &p ]( const ColorSpacePoint& i )
@@ -1403,9 +1403,9 @@ void Device::start()
 									frame.mTimeStamp	= static_cast<long long>( timeStamp );
 									int32_t h			= frameDescription.height;
 									int32_t w			= frameDescription.width;
-									frame.mChannel		= Channel8u( w, h );
+									frame.mChannel		= Channel8u::create( w, h );
 									uint32_t capacity	= (uint32_t)( w * h );
-									uint8_t* buffer		= frame.mChannel.getData();
+									uint8_t* buffer		= frame.mChannel->getData();
 									bodyIndexFrame->CopyFrameDataToArray( capacity, buffer );
 								}
 							}
@@ -1449,9 +1449,9 @@ void Device::start()
 								hr = colorFrame->get_RelativeTime( &timeStamp );
 								if ( SUCCEEDED( hr ) ) {
 									frame.mTimeStamp	= static_cast<long long>( timeStamp );
-									frame.mSurface		= Surface8u( frame.getSize().x, frame.getSize().y, false, SurfaceChannelOrder::BGRA );
+									frame.mSurface		= Surface8u::create( frame.getSize().x, frame.getSize().y, false, SurfaceChannelOrder::BGRA );
 									uint32_t capacity	= frame.getSize().x * frame.getSize().y * frameDescription.bytesPerPixel;
-									uint8_t* buffer		= frame.mSurface.getData();
+									uint8_t* buffer		= frame.mSurface->getData();
 									colorFrame->CopyConvertedFrameDataToArray( capacity, buffer, ColorImageFormat_Bgra );
 								}
 							}
@@ -1496,9 +1496,9 @@ void Device::start()
 								hr = depthFrame->get_RelativeTime( &timeStamp );
 								if ( SUCCEEDED( hr ) ) {
 									frame.mTimeStamp	= static_cast<long long>( timeStamp );
-									frame.mChannel		= Channel16u( frame.getSize().x, frame.getSize().y );
+									frame.mChannel		= Channel16u::create( frame.getSize().x, frame.getSize().y );
 									uint32_t capacity	= frame.getSize().x * frame.getSize().y;
-									uint16_t* buffer	= frame.mChannel.getData();
+									uint16_t* buffer	= frame.mChannel->getData();
 									depthFrame->CopyFrameDataToArray( capacity, buffer );
 								}
 							}
@@ -1811,9 +1811,9 @@ void Device::start()
 									frame.mTimeStamp	= static_cast<long long>( timeStamp );
 									int32_t h			= frameDescription.height;
 									int32_t w			= frameDescription.width;
-									frame.mChannel		= Channel16u( w, h );
+									frame.mChannel		= Channel16u::create( w, h );
 									uint32_t capacity	= (uint32_t)( w * h );
-									uint16_t* buffer	= frame.mChannel.getData();
+									uint16_t* buffer	= frame.mChannel->getData();
 									infraredFrame->CopyFrameDataToArray( capacity, buffer );
 								}
 							}
@@ -1857,9 +1857,9 @@ void Device::start()
 									frame.mTimeStamp	= static_cast<long long>( timeStamp );
 									int32_t h			= frameDescription.height;
 									int32_t w			= frameDescription.width;
-									frame.mChannel		= Channel16u( w, h );
+									frame.mChannel		= Channel16u::create( w, h );
 									uint32_t capacity	= (uint32_t)( w * h );
-									uint16_t* buffer	= frame.mChannel.getData();
+									uint16_t* buffer	= frame.mChannel->getData();
 									infraredLongExposureFrame->CopyFrameDataToArray( capacity, buffer );
 								}
 							}

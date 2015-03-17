@@ -1,6 +1,6 @@
 /*
 * 
-* Copyright (c) 2014, Wieden+Kennedy
+* Copyright (c) 2015, Wieden+Kennedy
 * Stephen Schieberl
 * All rights reserved.
 * 
@@ -35,26 +35,25 @@
 * 
 */
 
-#include "cinder/app/AppBasic.h"
+#include "cinder/app/App.h"
 #include "cinder/gl/Texture.h"
 #include "cinder/params/Params.h"
 
 #include "Kinect2.h"
 
-class FaceApp : public ci::app::AppBasic 
+class FaceApp : public ci::app::App 
 {
 public:
-	void							draw();
-	void							prepareSettings( ci::app::AppBasic::Settings* settings );
-	void							setup();
-	void							update();
+	void							draw() override;
+	void							setup() override;
+	void							update() override;
 private:
 	Kinect2::DeviceRef				mDevice;
 	bool							mEnabledFace2d;
 	bool							mEnabledFace3d;
 	std::vector<Kinect2::Face2d>	mFaces2d;
 	std::vector<Kinect2::Face3d>	mFaces3d;
-	ci::Surface8u					mSurface;
+	ci::Surface8uRef				mSurface;
 
 	float							mFrameRate;
 	bool							mFullScreen;
@@ -77,12 +76,12 @@ void FaceApp::draw()
 	if ( mSurface ) {	
 		gl::color( Colorf::white() );
 		gl::enable( GL_TEXTURE_2D );
-		gl::TextureRef tex = gl::Texture::create( mSurface );
+		gl::TextureRef tex = gl::Texture::create( *mSurface );
 		gl::draw( tex, tex->getBounds(), Rectf( getWindowBounds() ) );
 	
 		gl::disable( GL_TEXTURE_2D );
 		gl::pushMatrices();
-		gl::scale( vec2( getWindowSize() ) / vec2( mSurface.getSize() ) );
+		gl::scale( vec2( getWindowSize() ) / vec2( mSurface->getSize() ) );
 		
 		for ( const Kinect2::Face3d& face : mFaces3d ) {
 			const TriMeshRef& mesh = face.getMesh();
@@ -134,12 +133,6 @@ void FaceApp::draw()
 	}
 
 	mParams->draw();
-}
-
-void FaceApp::prepareSettings( Settings* settings )
-{
-	settings->prepareWindow( Window::Format().size( 960, 540 ).title( "Face App" ) );
-	settings->setFrameRate( 60.0f );
 }
 
 void FaceApp::setup()
@@ -205,5 +198,9 @@ void FaceApp::update()
 	}
 }
 
-CINDER_APP_BASIC( FaceApp, RendererGl )
-	
+CINDER_APP( FaceApp, RendererGl, []( App::Settings* settings )
+{
+	settings->prepareWindow( Window::Format().size( 960, 540 ).title( "Face App" ) );
+	settings->setFrameRate( 60.0f );
+} )
+ 
