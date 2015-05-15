@@ -1207,8 +1207,7 @@ void Device::start(bool onlyEnabledHandlerThreads)
 		}
 
 		Process& process					= mProcesses.at( (FrameType)frameType );
-		switch ((FrameType)frameType) {
-#if 1
+		switch ( (FrameType)frameType ) {
 		case FrameType_Audio:
 			process.mThreadCallback = [ & ]()
 			{
@@ -1420,7 +1419,6 @@ void Device::start(bool onlyEnabledHandlerThreads)
 				}
 			};
 			break;
-#endif
 		case FrameType_BodyAndFace2d:
 			process.mThreadCallback = [ & ]()
 			{
@@ -1676,7 +1674,6 @@ void Device::start(bool onlyEnabledHandlerThreads)
 				}
 			};
 			break;
-#if 1
 		case FrameType_BodyIndex:
 			process.mThreadCallback = [ & ]()
 			{
@@ -1722,7 +1719,6 @@ void Device::start(bool onlyEnabledHandlerThreads)
 				}
 			};
 			break;
-#endif
 		case FrameType_Color:
 			process.mThreadCallback = [ & ]()
 			{
@@ -1816,7 +1812,6 @@ void Device::start(bool onlyEnabledHandlerThreads)
 				}
 			};
 			break;
-#if 1
 		case FrameType_Face2d:
 			process.mThreadCallback = [ & ]()
 			{
@@ -2087,7 +2082,6 @@ void Device::start(bool onlyEnabledHandlerThreads)
 				}
 			};
 			break;
-#endif
 		case FrameType_Infrared:
 			process.mThreadCallback = [ & ]()
 			{
@@ -2133,7 +2127,6 @@ void Device::start(bool onlyEnabledHandlerThreads)
 				}
 			};
 			break;
-#if 0
 		case FrameType_InfraredLongExposure:
 			process.mThreadCallback = [ & ]()
 			{
@@ -2180,7 +2173,6 @@ void Device::start(bool onlyEnabledHandlerThreads)
 				}
 			};
 			break;
-#endif
 		}
 		process.start();
 	}
