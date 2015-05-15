@@ -421,7 +421,7 @@ public:
 	static DeviceRef									create();
 	~Device();
 	
-	void												start();
+	void												start(bool onlyEnabledHandlerThreads = false);
 	void												stop();
 
 	void												enableFaceMesh( bool enable = true );
@@ -430,6 +430,12 @@ public:
 	bool												isFaceMeshEnabled() const;
 	bool												isHandTrackingEnabled() const;
 	bool												isJointTrackingEnabled() const;
+
+	template<typename T, typename Y>
+	inline void											connectBodyAndFace2dEventHandler(T eventHandler, Y* obj)
+	{
+		connectBodyAndFace2dEventHandler(std::bind(eventHandler, obj, std::placeholders::_1));
+	}
 
 	template<typename T, typename Y>
 	inline void											connectAudioEventHandler( T eventHandler, Y* obj )
@@ -485,6 +491,7 @@ public:
 		connectInfraredLongExposureEventHandler( std::bind( eventHandler, obj, std::placeholders::_1 ) );
 	}
 
+	void												connectBodyAndFace2dEventHandler(const std::function<void(const BodyFrame&, const Face2dFrame&)>& eventHandler);
 	void												connectAudioEventHandler( const std::function<void ( const AudioFrame& )>& eventHandler );
 	void												connectBodyEventHandler( const std::function<void ( const BodyFrame& )>& eventHandler );
 	void												connectBodyIndexEventHandler( const std::function<void ( const BodyIndexFrame& )>& eventHandler );
@@ -495,6 +502,7 @@ public:
 	void												connectInfraredEventHandler( const std::function<void ( const InfraredFrame& )>& eventHandler );
 	void												connectInfraredLongExposureEventHandler( const std::function<void ( const InfraredFrame& )>& eventHandler );
 
+	void												disconnectBodyAndFace2dEventHandler();
 	void												disconnectAudioEventHandler();
 	void												disconnectBodyEventHandler();
 	void												disconnectBodyIndexEventHandler();
@@ -505,6 +513,7 @@ public:
 	void												disconnectInfraredEventHandler();
 	void												disconnectInfraredLongExposureEventHandler();
 
+	bool												isBodyAndFace2dEventHandlerConnected() const;
 	bool												isAudioEventHandlerConnected() const;
 	bool												isBodyEventHandlerConnected() const;
 	bool												isBodyIndexEventHandlerConnected() const;
@@ -530,7 +539,8 @@ protected:
 	enum : size_t
 	{
 		FrameType_Audio,
-		FrameType_Body, 
+		FrameType_Body,
+		FrameType_BodyAndFace2d,
 		FrameType_BodyIndex, 
 		FrameType_Color, 
 		FrameType_Depth, 
@@ -549,7 +559,8 @@ protected:
 	IKinectSensor*										mSensor;
 
 	std::map<FrameType, Process>						mProcesses;
-	
+
+	std::function<void ( const BodyFrame&, const Face2dFrame& )> mEventHandlerBodyAndFace2d;
 	std::function<void ( const AudioFrame& )>			mEventHandlerAudio;
 	std::function<void ( const BodyFrame& )>			mEventHandlerBody;
 	std::function<void ( const BodyIndexFrame& )>		mEventHandlerBodyIndex;
@@ -598,7 +609,8 @@ protected:
 	};
 	typedef std::shared_ptr<FaceData>					FaceDataRef;
 
-	std::list<FaceDataRef>								mFaceData;
+	//std::list<FaceDataRef>								mFaceData;
+	std::vector<FaceDataRef>								mFaceData;
 	float												mFaceShapeDeformations[ FaceShapeDeformations::FaceShapeDeformations_Count ];
 public:
 

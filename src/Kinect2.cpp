@@ -786,7 +786,7 @@ DeviceRef Device::create()
 Device::Device()
 	: mEnabledFaceMesh( false ), mEnabledHandTracking( false ), 
 	mEnabledJointTracking( true ), mEventHandlerAudio( nullptr ), 
-	mEventHandlerBody( nullptr ), mEventHandlerBodyIndex( nullptr ), 
+	mEventHandlerBody(nullptr), mEventHandlerBodyAndFace2d(nullptr), mEventHandlerBodyIndex(nullptr),
 	mEventHandlerColor( nullptr ), mEventHandlerDepth( nullptr ), 
 	mEventHandlerFace2d( nullptr ), mEventHandlerFace3d( nullptr ), 
 	mEventHandlerInfrared( nullptr ), mEventHandlerInfraredLongExposure( nullptr ), 
@@ -813,6 +813,11 @@ Device::~Device()
 		mSensor->Release();
 		mSensor = nullptr;
 	}
+}
+
+void Device::connectBodyAndFace2dEventHandler(const function<void(const BodyFrame&, const Face2dFrame&)>& eventHandler)
+{
+	mEventHandlerBodyAndFace2d = eventHandler;
 }
 
 void Device::connectAudioEventHandler( const function<void ( const AudioFrame& )>& eventHandler )
@@ -860,6 +865,11 @@ void Device::connectInfraredLongExposureEventHandler( const function<void ( cons
 	mEventHandlerInfraredLongExposure = eventHandler;
 }
 
+void Device::disconnectBodyAndFace2dEventHandler()
+{
+	mEventHandlerBodyAndFace2d = nullptr;
+}
+
 void Device::disconnectAudioEventHandler()
 {
 	mEventHandlerAudio = nullptr;
@@ -903,6 +913,11 @@ void Device::disconnectInfraredEventHandler()
 void Device::disconnectInfraredLongExposureEventHandler()
 {
 	mEventHandlerInfraredLongExposure = nullptr;
+}
+
+bool Device::isBodyAndFace2dEventHandlerConnected() const
+{
+	return mEventHandlerBodyAndFace2d != nullptr;
 }
 
 bool Device::isAudioEventHandlerConnected() const
@@ -1143,7 +1158,7 @@ vector<ivec2> Device::mapDepthToColor( const vector<ivec2>& v, const Channel16uR
 	return p;
 }
 
-void Device::start()
+void Device::start(bool onlyEnabledHandlerThreads)
 {
 	long hr = S_OK;
 
@@ -1165,8 +1180,35 @@ void Device::start()
 	uint8_t sensorIsOpen = isSensorOpen();
 	for ( size_t frameType = (size_t)FrameType_Audio; frameType < (size_t)FrameType_InfraredLongExposure; ++frameType ) {
 		mProcesses[ (FrameType)frameType ]	= Process();
+
+
+		if (onlyEnabledHandlerThreads)
+		{
+			if ((FrameType)frameType == FrameType_Audio && !mEventHandlerAudio)
+				continue;
+			if ((FrameType)frameType == FrameType_Body && !mEventHandlerBody)
+				continue;
+			if ((FrameType)frameType == FrameType_BodyAndFace2d && !mEventHandlerBodyAndFace2d)
+				continue;
+			if ((FrameType)frameType == FrameType_BodyIndex && !mEventHandlerBodyIndex)
+				continue;
+			if ((FrameType)frameType == FrameType_Color && !mEventHandlerColor)
+				continue;
+			if ((FrameType)frameType == FrameType_Depth && !mEventHandlerDepth)
+				continue;
+			if ((FrameType)frameType == FrameType_Face2d && !mEventHandlerFace2d)
+				continue;
+			if ((FrameType)frameType == FrameType_Face3d && !mEventHandlerFace3d)
+				continue;
+			if ((FrameType)frameType == FrameType_Infrared && !mEventHandlerInfrared)
+				continue;
+			if ((FrameType)frameType == FrameType_InfraredLongExposure && !mEventHandlerInfraredLongExposure)
+				continue;
+		}
+
 		Process& process					= mProcesses.at( (FrameType)frameType );
-		switch( (FrameType)frameType ) {
+		switch ((FrameType)frameType) {
+#if 1
 		case FrameType_Audio:
 			process.mThreadCallback = [ & ]()
 			{
@@ -1378,6 +1420,263 @@ void Device::start()
 				}
 			};
 			break;
+#endif
+		case FrameType_BodyAndFace2d:
+			process.mThreadCallback = [ & ]()
+			{
+				while ( process.mRunning ) {
+					if ( process.mNewData || mKinect == KCB_INVALID_HANDLE || mEventHandlerBodyAndFace2d == nullptr ) {
+						this_thread::sleep_for( chrono::milliseconds( kThreadSleepDuration ) );
+						continue;
+					}
+
+					if ( KCBIsFrameReady( mKinect, FrameSourceTypes_Body ) ) {		
+						BodyFrame frameBody;
+						Face2dFrame frameFace;
+						int64_t timeStamp					= 0L;
+						IBody* kinectBodies[ BODY_COUNT ]	= { 0 };
+
+						bool newFaces = false;
+						long hr = KCBGetBodyData( mKinect, BODY_COUNT, kinectBodies, &timeStamp );
+						if ( SUCCEEDED( hr ) ) {
+							for ( uint8_t i = 0; i < BODY_COUNT; ++i ) {
+								IBody* kinectBody = kinectBodies[ i ];
+								if ( kinectBody != nullptr ) {
+									Body body;
+									body.mIndex			= i;
+									uint8_t isTracked	= false;
+									long hrIsTracked	= kinectBody->get_IsTracked( &isTracked );
+									if ( SUCCEEDED( hrIsTracked ) && isTracked ) {
+										body.mTracked = true;
+
+										if ( mEnabledJointTracking ) {
+											Joint joints[ JointType_Count ];
+											kinectBody->GetJoints( JointType_Count, joints );
+
+											JointOrientation jointOrientations[ JointType_Count ];
+											kinectBody->GetJointOrientations( JointType_Count, jointOrientations );
+
+											for ( int32_t j = 0; j < JointType_Count; ++j ) {
+												JointType parentJoint = (JointType)j;
+												switch ( (JointType)j ) {
+												case JointType::JointType_AnkleLeft:
+													parentJoint = JointType_KneeLeft;
+													break;
+												case JointType::JointType_AnkleRight:
+													parentJoint = JointType_KneeRight;
+													break;
+												case JointType::JointType_ElbowLeft:
+													parentJoint = JointType_ShoulderLeft;
+													break;
+												case JointType::JointType_ElbowRight:
+													parentJoint = JointType_ShoulderRight;
+													break;
+												case JointType::JointType_FootLeft:
+													parentJoint = JointType_AnkleLeft;
+													break;
+												case JointType::JointType_FootRight:
+													parentJoint = JointType_AnkleRight;
+													break;
+												case JointType::JointType_HandLeft:
+													parentJoint = JointType_WristLeft;
+													break;
+												case JointType::JointType_HandRight:
+													parentJoint = JointType_WristRight;
+													break;
+												case JointType::JointType_HandTipLeft:
+													parentJoint = JointType_HandLeft;
+													break;
+												case JointType::JointType_HandTipRight:
+													parentJoint = JointType_HandRight;
+													break;
+												case JointType::JointType_Head:
+													parentJoint = JointType_Neck;
+													break;
+												case JointType::JointType_HipLeft:
+													parentJoint = JointType_SpineBase;
+													break;
+												case JointType::JointType_HipRight:
+													parentJoint = JointType_SpineBase;
+													break;
+												case JointType::JointType_KneeLeft:
+													parentJoint = JointType_HipLeft;
+													break;
+												case JointType::JointType_KneeRight:
+													parentJoint = JointType_HipRight;
+													break;
+												case JointType::JointType_Neck:
+													parentJoint = JointType_SpineShoulder;
+													break;
+												case JointType::JointType_ShoulderLeft:
+													parentJoint = JointType_SpineShoulder;
+													break;
+												case JointType::JointType_ShoulderRight:
+													parentJoint = JointType_SpineShoulder;
+													break;
+												case JointType::JointType_SpineBase:
+													parentJoint = JointType_SpineBase;
+													break;
+												case JointType::JointType_SpineMid:
+													parentJoint = JointType_SpineBase;
+													break;
+												case JointType::JointType_SpineShoulder:
+													parentJoint = JointType_SpineMid;
+													break;
+												case JointType::JointType_ThumbLeft:
+													parentJoint = JointType_HandLeft;
+													break;
+												case JointType::JointType_ThumbRight:
+													parentJoint = JointType_HandRight;
+													break;
+												case JointType::JointType_WristLeft:
+													parentJoint = JointType_ElbowLeft;
+													break;
+												case JointType::JointType_WristRight:
+													parentJoint = JointType_ElbowRight;
+													break;
+												}
+
+												Body::Joint joint(
+													toVec3(joints[j].Position),
+													toQuat(jointOrientations[j].Orientation),
+													joints[j].TrackingState,
+													parentJoint
+													);
+												body.mJointMap.insert(pair<JointType, Body::Joint>(static_cast<JointType>(j), joint));
+											}
+										}
+
+										PointF lean;
+										kinectBody->get_Engaged(&body.mEngaged);
+										kinectBody->get_Lean(&lean);
+										kinectBody->get_LeanTrackingState(&body.mLeanTrackingState);
+										kinectBody->get_TrackingId(&body.mId);
+
+										body.mLean = toVec2(lean);
+
+										DetectionResult activities[Activity_Count];
+										kinectBody->GetActivityDetectionResults((UINT)Activity_Count, activities);
+										for (size_t j = 0; j < (size_t)Activity_Count; ++j) {
+											body.mActivities[(Activity)j] = activities[j];
+										}
+
+										DetectionResult appearances[Appearance_Count];
+										kinectBody->GetAppearanceDetectionResults((UINT)Appearance_Count, appearances);
+										for (size_t j = 0; j < (size_t)Appearance_Count; ++j) {
+											body.mAppearances[(Appearance)i] = appearances[j];
+										}
+
+										DetectionResult expressions[Expression_Count];
+										kinectBody->GetExpressionDetectionResults((UINT)Expression_Count, expressions);
+										for (size_t j = 0; j < (size_t)Expression_Count; ++j) {
+											body.mExpressions[(Expression)j] = expressions[j];
+										}
+
+										if (mEnabledHandTracking) {
+											kinectBody->get_HandLeftConfidence(&body.mHands[0].mConfidence);
+											kinectBody->get_HandLeftState(&body.mHands[0].mState);
+											kinectBody->get_HandRightConfidence(&body.mHands[1].mConfidence);
+											kinectBody->get_HandRightState(&body.mHands[1].mState);
+										}
+									}
+									frameBody.mBodies.push_back(body);
+
+									Face2d face;
+									face.mIndex = i;
+									FaceDataRef iter = nullptr;
+									if (mFaceData.size() > i)
+										iter = mFaceData[i];
+									if (SUCCEEDED(hrIsTracked) && isTracked	&&
+										iter != nullptr &&
+										iter->mFaceFrameSource2d != nullptr	&&
+										iter->mFaceFrameReader2d != nullptr) 
+									{
+										kinectBody->get_TrackingId(&face.mId);
+										IFaceFrame* faceFrame = nullptr;
+										hr = iter->mFaceFrameReader2d->AcquireLatestFrame(&faceFrame);
+										if (SUCCEEDED(hr) && faceFrame != nullptr) {
+											uint8_t trackingIdValid = 0;
+											hr = faceFrame->get_IsTrackingIdValid(&trackingIdValid);
+											if (SUCCEEDED(hr) && trackingIdValid != 0) {
+												IFaceFrameResult* faceFrameResult = nullptr;
+												hr = faceFrame->get_FaceFrameResult(&faceFrameResult);
+												newFaces = true;
+												if (SUCCEEDED(hr) && faceFrameResult != nullptr) {
+													face.mTracked = true;
+
+													RectI faceRectColor = { 0 };
+													hr = faceFrameResult->get_FaceBoundingBoxInColorSpace(&faceRectColor);
+													if (SUCCEEDED(hr)) {
+														face.mBoundsColor = toRectf(faceRectColor);
+													}
+
+													RectI faceRectInfrared = { 0 };
+													hr = faceFrameResult->get_FaceBoundingBoxInInfraredSpace(&faceRectInfrared);
+													if (SUCCEEDED(hr)) {
+														face.mBoundsInfrared = toRectf(faceRectInfrared);
+													}
+
+													PointF facePointsColor[FacePointType::FacePointType_Count];
+													hr = faceFrameResult->GetFacePointsInColorSpace(FacePointType_Count, facePointsColor);
+													if (SUCCEEDED(hr)) {
+														for (size_t i = 0; i < (size_t)FacePointType_Count; ++i) {
+															face.mPointsColor.push_back(toVec2(facePointsColor[i]));
+														}
+													}
+
+													PointF facePointsInfrared[FacePointType::FacePointType_Count];
+													hr = faceFrameResult->GetFacePointsInInfraredSpace(FacePointType_Count, facePointsInfrared);
+													if (SUCCEEDED(hr)) {
+														for (size_t i = 0; i < (size_t)FacePointType_Count; ++i) {
+															face.mPointsInfrared.push_back(toVec2(facePointsInfrared[i]));
+														}
+													}
+
+													Vector4 faceRotation;
+													hr = faceFrameResult->get_FaceRotationQuaternion(&faceRotation);
+													if (SUCCEEDED(hr)) {
+														face.mRotation = toQuat(faceRotation);
+													}
+
+													DetectionResult faceProperties[FaceProperty::FaceProperty_Count];
+													hr = faceFrameResult->GetFaceProperties(FaceProperty_Count, faceProperties);
+													if (SUCCEEDED(hr)) {
+														for (size_t i = 0; i < (size_t)FaceProperty_Count; ++i) {
+															face.mFaceProperties[(FaceProperty)i] = faceProperties[i];
+														}
+													}
+													faceFrameResult->Release();
+													faceFrameResult = nullptr;
+												}
+											}
+
+											faceFrame->Release();
+											faceFrame = nullptr;
+										}
+										else {
+											iter->mFaceFrameSource2d->put_TrackingId(face.getId());
+										}
+									}
+									frameFace.mFaces.push_back(face);
+
+									kinectBody->Release();
+									kinectBody = nullptr;
+								}
+							}
+							frameBody.mTimeStamp = static_cast<long long>(timeStamp);
+							if (newFaces)
+								frameFace.mTimeStamp = static_cast<long long>(timeStamp);
+						}
+						if (frameBody.getTimeStamp() > mFrameBody.getTimeStamp()) {
+							mFrameBody = frameBody;
+							mFrameFace2d = frameFace;
+							process.mNewData = true;
+						}
+					}
+				}
+			};
+			break;
+#if 1
 		case FrameType_BodyIndex:
 			process.mThreadCallback = [ & ]()
 			{
@@ -1423,6 +1722,7 @@ void Device::start()
 				}
 			};
 			break;
+#endif
 		case FrameType_Color:
 			process.mThreadCallback = [ & ]()
 			{
@@ -1516,6 +1816,7 @@ void Device::start()
 				}
 			};
 			break;
+#if 1
 		case FrameType_Face2d:
 			process.mThreadCallback = [ & ]()
 			{
@@ -1786,6 +2087,7 @@ void Device::start()
 				}
 			};
 			break;
+#endif
 		case FrameType_Infrared:
 			process.mThreadCallback = [ & ]()
 			{
@@ -1831,6 +2133,7 @@ void Device::start()
 				}
 			};
 			break;
+#if 0
 		case FrameType_InfraredLongExposure:
 			process.mThreadCallback = [ & ]()
 			{
@@ -1877,6 +2180,7 @@ void Device::start()
 				}
 			};
 			break;
+#endif
 		}
 		process.start();
 	}
@@ -1903,7 +2207,13 @@ void Device::update()
 	for ( size_t i = (size_t)FrameType_Audio; i < (size_t)FrameType_InfraredLongExposure; ++i ) {
 		FrameType frameType	= (FrameType)i;
 		Process& process	= mProcesses.at( frameType );
-		switch( frameType ) {
+		switch (frameType) {
+		case FrameType_BodyAndFace2d:
+			if (mEventHandlerBodyAndFace2d != nullptr && process.mNewData) {
+				mEventHandlerBodyAndFace2d(mFrameBody, mFrameFace2d);
+				process.mNewData = false;
+			}
+			break;
 		case FrameType_Audio:
 			if ( mEventHandlerAudio != nullptr && process.mNewData ) {
 				mEventHandlerAudio( mFrameAudio );
