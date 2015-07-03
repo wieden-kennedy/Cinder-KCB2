@@ -44,6 +44,7 @@
 #include "cinder/Rect.h"
 #include "cinder/Surface.h"
 #include "cinder/TriMesh.h"
+#include "cinder/Signals.h"
 #include <atomic>
 #include <functional>
 #include <map>
@@ -573,6 +574,8 @@ protected:
 	bool												mEnabledFaceMesh;
 	bool												mEnabledHandTracking;
 	bool												mEnabledJointTracking;
+
+	ci::signals::Connection								mUpdateConnection;
 
 	static uint32_t										sFaceModelIndexCount;
 	static uint32_t										sFaceModelVertexCount;
