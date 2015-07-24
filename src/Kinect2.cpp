@@ -1753,7 +1753,7 @@ void Device::start()
 															if ( SUCCEEDED( hr ) ) {
 																face.mMesh = TriMesh::create( TriMesh::Format().positions() ); 
 																face.mMesh->appendIndices( &iter->mFaceModelIndices[ 0 ], sFaceModelIndexCount );
-																face.mMesh->appendVertices( &iter->mFaceModelVertices[ 0 ], sFaceModelVertexCount );
+																face.mMesh->appendPositions( &iter->mFaceModelVertices[ 0 ], sFaceModelVertexCount );
 															}
 														}
 													}
