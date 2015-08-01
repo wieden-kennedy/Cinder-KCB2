@@ -1,38 +1,38 @@
 /*
-* 
+*
 * Copyright (c) 2015, Wieden+Kennedy
 * Stephen Schieberl
 * All rights reserved.
-* 
-* Redistribution and use in source and binary forms, with or 
-* without modification, are permitted provided that the following 
+*
+* Redistribution and use in source and binary forms, with or
+* without modification, are permitted provided that the following
 * conditions are met:
-* 
-* Redistributions of source code must retain the above copyright 
+*
+* Redistributions of source code must retain the above copyright
 * notice, this list of conditions and the following disclaimer.
-* Redistributions in binary form must reproduce the above copyright 
-* notice, this list of conditions and the following disclaimer in 
-* the documentation and/or other materials provided with the 
+* Redistributions in binary form must reproduce the above copyright
+* notice, this list of conditions and the following disclaimer in
+* the documentation and/or other materials provided with the
 * distribution.
-* 
-* Neither the name of the Ban the Rewind nor the names of its 
-* contributors may be used to endorse or promote products 
-* derived from this software without specific prior written 
+*
+* Neither the name of the Ban the Rewind nor the names of its
+* contributors may be used to endorse or promote products
+* derived from this software without specific prior written
 * permission.
-* 
-* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
-* "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
-* LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS 
-* FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE 
-* COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, 
+*
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+* "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+* LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+* FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+* COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-* BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
-* LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
-* CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, 
-* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
-* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+* BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+* LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+* CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+* STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-* 
+*
 */
 
 #pragma once
@@ -44,6 +44,7 @@
 #include "cinder/Rect.h"
 #include "cinder/Surface.h"
 #include "cinder/TriMesh.h"
+#include "cinder/Signals.h"
 #include <atomic>
 #include <functional>
 #include <map>
@@ -180,23 +181,23 @@ public:
 
 		friend class									Device;
 	};
-	
+
 	//////////////////////////////////////////////////////////////////////////////////////////////
 
 	class Joint
 	{
 	public:
 		Joint();
-		
+
 		uint64_t										getId() const;
 		const ci::quat&									getOrientation() const;
 		JointType										getParentJoint() const;
 		const ci::vec3&									getPosition() const;
 		TrackingState									getTrackingState() const;
 	protected:
-		Joint( const ci::vec3& position, const ci::quat& orientation, 
+		Joint( const ci::vec3& position, const ci::quat& orientation,
 			TrackingState trackingState, JointType parentJoint );
-		
+
 		ci::quat										mOrientation;
 		JointType										mParentJoint;
 		ci::vec3										mPosition;
@@ -294,7 +295,7 @@ protected:
 	uint8_t*											mBuffer;
 	unsigned long										mBufferSize;
 	WAVEFORMATEX										mFormat;
-	
+
 	friend class										Device;
 };
 
@@ -396,7 +397,7 @@ class Device
 protected:
 
 	//////////////////////////////////////////////////////////////////////////////////////////////
-	
+
 	class Process
 	{
 	public:
@@ -420,7 +421,7 @@ protected:
 public:
 	static DeviceRef									create();
 	~Device();
-	
+
 	void												start();
 	void												stop();
 
@@ -530,16 +531,16 @@ protected:
 	enum : size_t
 	{
 		FrameType_Audio,
-		FrameType_Body, 
-		FrameType_BodyIndex, 
-		FrameType_Color, 
-		FrameType_Depth, 
-		FrameType_Face2d, 
-		FrameType_Face3d, 
-		FrameType_Infrared, 
+		FrameType_Body,
+		FrameType_BodyIndex,
+		FrameType_Color,
+		FrameType_Depth,
+		FrameType_Face2d,
+		FrameType_Face3d,
+		FrameType_Infrared,
 		FrameType_InfraredLongExposure
 	} typedef FrameType;
-	
+
 	Device();
 
 	virtual void										update();
@@ -549,7 +550,7 @@ protected:
 	IKinectSensor*										mSensor;
 
 	std::map<FrameType, Process>						mProcesses;
-	
+
 	std::function<void ( const AudioFrame& )>			mEventHandlerAudio;
 	std::function<void ( const BodyFrame& )>			mEventHandlerBody;
 	std::function<void ( const BodyIndexFrame& )>		mEventHandlerBodyIndex;
@@ -573,6 +574,8 @@ protected:
 	bool												mEnabledFaceMesh;
 	bool												mEnabledHandTracking;
 	bool												mEnabledJointTracking;
+
+	ci::signals::Connection								mUpdateConnection;
 
 	static uint32_t										sFaceModelIndexCount;
 	static uint32_t										sFaceModelVertexCount;
@@ -614,20 +617,20 @@ public:
 		friend class									Device;
 	};
 
-	class ExcDeviceCloseFailed : public Exception 
+	class ExcDeviceCloseFailed : public Exception
 	{
 	public:
 		ExcDeviceCloseFailed( long hr ) throw();
 	};
-	
+
 	// FOR FUTURE USE
-	class ExcDeviceNotAvailable : public Exception 
+	class ExcDeviceNotAvailable : public Exception
 	{
 	public:
 		ExcDeviceNotAvailable( long hr ) throw();
 	};
 
-	class ExcDeviceOpenFailed : public Exception 
+	class ExcDeviceOpenFailed : public Exception
 	{
 	public:
 		ExcDeviceOpenFailed() throw();
