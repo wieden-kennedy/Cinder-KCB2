@@ -37,9 +37,6 @@
 
 #include "cinder/app/App.h"
 #include "cinder/gl/gl.h"
-#include "cinder/gl/GlslProg.h"
-#include "cinder/gl/Texture.h"
-#include "cinder/gl/VboMesh.h"
 #include "cinder/params/Params.h"
 #include "cinder/CameraUi.h"
 
@@ -49,7 +46,6 @@ class PointCloudApp : public ci::app::App
 {
 public:
 	void						draw() override;
-	void 						mouseDrag( ci::app::MouseEvent event ) override;
 	void						resize() override;
 	void						setup() override;
 	void						update() override;
@@ -88,7 +84,7 @@ void PointCloudApp::draw()
 {
 	gl::viewport( getWindowSize() );
 	gl::clear();
-	gl::setMatrices(mCamUi.getCamera());
+	gl::setMatrices(mCamera);
 	gl::enableAlphaBlending();
 	gl::enableDepthRead();
 	gl::enableDepthWrite();
@@ -172,19 +168,9 @@ void PointCloudApp::loadGlsl()
 	}
 }
 
-void PointCloudApp::mouseDrag( MouseEvent event )
-{
-	bool middle = event.isMiddleDown()	|| ( event.isMetaDown()		&& event.isLeftDown() );
-	bool right	= event.isRightDown()	|| ( event.isControlDown()	&& event.isLeftDown() );
-	mCamUi.mouseDrag(event.getPos(), event.isLeftDown() && !middle && !right, middle, right);
-}
-
 void PointCloudApp::resize()
 {
-	CameraPersp cam = mCamUi.getCamera();
-	cam.setAspectRatio( getWindowAspectRatio() );
-	//mCamUi.setCurrentCam(cam);
-
+	mCamera.setAspectRatio( getWindowAspectRatio() );
 	gl::enableVerticalSync();
 }
 

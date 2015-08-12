@@ -37,8 +37,6 @@
 
 #include "cinder/app/App.h"
 #include "cinder/gl/gl.h"
-#include "cinder/gl/Pbo.h"
-#include "cinder/gl/Texture.h"
 #include "cinder/params/Params.h"
 
 #include "Kinect2.h"
