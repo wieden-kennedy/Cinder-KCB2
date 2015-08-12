@@ -36,11 +36,12 @@
 */
 
 #include "cinder/app/App.h"
-#include "cinder/MayaCamUI.h"
+#include "cinder/gl/gl.h"
 #include "cinder/gl/GlslProg.h"
 #include "cinder/gl/Texture.h"
 #include "cinder/gl/VboMesh.h"
 #include "cinder/params/Params.h"
+#include "cinder/CameraUi.h"
 
 #include "Kinect2.h"
 
@@ -69,7 +70,8 @@ private:
 	ci::gl::TextureRef			mTextureDepthToColorTable;
 	ci::gl::VboMeshRef			mVboMesh;
 
-	ci::MayaCamUI				mMayaCam;
+	ci::CameraUi				mCamUi;
+	ci::CameraPersp				mCamera;
 
 	float						mFrameRate;
 	bool						mFullScreen;
@@ -86,7 +88,7 @@ void PointCloudApp::draw()
 {
 	gl::viewport( getWindowSize() );
 	gl::clear();
-	gl::setMatrices( mMayaCam.getCamera() );
+	gl::setMatrices(mCamUi.getCamera());
 	gl::enableAlphaBlending();
 	gl::enableDepthRead();
 	gl::enableDepthWrite();
@@ -174,14 +176,14 @@ void PointCloudApp::mouseDrag( MouseEvent event )
 {
 	bool middle = event.isMiddleDown()	|| ( event.isMetaDown()		&& event.isLeftDown() );
 	bool right	= event.isRightDown()	|| ( event.isControlDown()	&& event.isLeftDown() );
-	mMayaCam.mouseDrag( event.getPos(), event.isLeftDown() && !middle && !right, middle, right );
+	mCamUi.mouseDrag(event.getPos(), event.isLeftDown() && !middle && !right, middle, right);
 }
 
 void PointCloudApp::resize()
 {
-	CameraPersp cam = mMayaCam.getCamera();
+	CameraPersp cam = mCamUi.getCamera();
 	cam.setAspectRatio( getWindowAspectRatio() );
-	mMayaCam.setCurrentCam( cam );
+	//mCamUi.setCurrentCam(cam);
 
 	gl::enableVerticalSync();
 }
@@ -234,6 +236,8 @@ void PointCloudApp::setup()
 	mParams->addParam( "Full screen",	&mFullScreen ).key( "f" );
 	mParams->addButton( "Load GLSL",	[ & ]() { loadGlsl(); },	"key=g" );
 	mParams->addButton( "Quit",			[ & ]() { quit(); },		"key=q" );
+
+	mCamUi = CameraUi(&mCamera, getWindow());
 
 	resize();
 }
