@@ -548,7 +548,7 @@ protected:
 	KCBHANDLE											mKinect;
 	IKinectSensor*										mSensor;
 
-	std::map<FrameType, Process>						mProcesses;
+	std::map<FrameType, Process*>						mProcesses;
 	
 	std::function<void ( const AudioFrame& )>			mEventHandlerAudio;
 	std::function<void ( const BodyFrame& )>			mEventHandlerBody;

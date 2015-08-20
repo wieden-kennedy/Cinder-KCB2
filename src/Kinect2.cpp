@@ -742,7 +742,7 @@ const vector<Face3d>& Face3dFrame::getFaces() const
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 Device::Process::Process()
-: mNewData( atomic<bool>( false ) ), mRunning( atomic<bool>( false ) ), 
+: mNewData( false ), mRunning( false ), 
 mThreadCallback( nullptr )
 {
 }
@@ -1164,8 +1164,8 @@ void Device::start()
 
 	uint8_t sensorIsOpen = isSensorOpen();
 	for ( size_t frameType = (size_t)FrameType_Audio; frameType < (size_t)FrameType_InfraredLongExposure; ++frameType ) {
-		mProcesses[ (FrameType)frameType ]	= Process();
-		Process& process					= mProcesses.at( (FrameType)frameType );
+		mProcesses[ (FrameType)frameType ]	= new Process();
+		Process& process					= *mProcesses.at( (FrameType)frameType );
 		switch( (FrameType)frameType ) {
 		case FrameType_Audio:
 			process.mThreadCallback = [ & ]()
@@ -1894,7 +1894,7 @@ void Device::stop()
 	}
 
 	for ( size_t i = (size_t)FrameType_Audio; i < (size_t)FrameType_InfraredLongExposure; ++i ) {
-		mProcesses.at( (FrameType)i ).stop();
+		mProcesses.at( (FrameType)i )->stop();
 	}
 }
 
@@ -1902,7 +1902,7 @@ void Device::update()
 {
 	for ( size_t i = (size_t)FrameType_Audio; i < (size_t)FrameType_InfraredLongExposure; ++i ) {
 		FrameType frameType	= (FrameType)i;
-		Process& process	= mProcesses.at( frameType );
+		Process& process	= *mProcesses.at( frameType );
 		switch( frameType ) {
 		case FrameType_Audio:
 			if ( mEventHandlerAudio != nullptr && process.mNewData ) {
