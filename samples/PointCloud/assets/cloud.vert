@@ -1,5 +1,3 @@
-#version 150 core
-
 uniform mat4		ciModelViewProjection;
 uniform usampler2D	uTextureDepth;
 uniform sampler2D	uTextureDepthToCameraTable;

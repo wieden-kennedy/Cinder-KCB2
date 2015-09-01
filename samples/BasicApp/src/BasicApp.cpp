@@ -36,8 +36,6 @@
 */
 
 #include "cinder/app/App.h"
-#include "cinder/gl/Pbo.h"
-#include "cinder/gl/Texture.h"
 #include "cinder/params/Params.h"
 
 #include "Kinect2.h"
@@ -45,8 +43,9 @@
 class BasicApp : public ci::app::App 
 {
 public:
+	BasicApp();
+
 	void						draw() override;
-	void						setup() override;
 	void						update() override;
 private:
 	Kinect2::DeviceRef			mDevice;
@@ -61,44 +60,16 @@ private:
 };
 
 #include "cinder/app/RendererGl.h"
+#include "cinder/gl/gl.h"
 
 using namespace ci;
 using namespace ci::app;
 using namespace std;
 
-void BasicApp::draw()
+BasicApp::BasicApp()
 {
-	gl::viewport( getWindowSize() );
-	gl::clear();
-	gl::setMatricesWindow( getWindowSize() );
-	gl::enableAlphaBlending();
-	
-	if ( mSurfaceColor ) {
-		gl::TextureRef tex = gl::Texture::create( *mSurfaceColor );
-		gl::draw( tex, tex->getBounds(), Rectf( vec2( 0.0f ), getWindowCenter() ) );
-	}
-	if ( mChannelDepth ) {
-		gl::TextureRef tex = gl::Texture::create( *Kinect2::channel16To8( mChannelDepth ) );
-		gl::draw( tex, tex->getBounds(), Rectf( getWindowCenter().x, 0.0f, (float)getWindowWidth(), getWindowCenter().y ) );
-	}
-	if ( mChannelInfrared ) {
-		gl::TextureRef tex = gl::Texture::create( *mChannelInfrared );
-		gl::draw( tex, tex->getBounds(), Rectf( 0.0f, getWindowCenter().y, getWindowCenter().x, (float)getWindowHeight() ) );
-	}
-	if ( mChannelBodyIndex ) {
-		gl::TextureRef tex = gl::Texture::create( *Kinect2::colorizeBodyIndex( mChannelBodyIndex ) );
-		gl::draw( tex, tex->getBounds(), Rectf( getWindowCenter(), vec2( getWindowSize() ) ) );
-	}
-
-	mParams->draw();
-}
-
-void BasicApp::setup()
-{	
-	gl::enable( GL_TEXTURE_2D );
-	
 	mFrameRate	= 0.0f;
-	mFullScreen	= false;
+	mFullScreen = false;
 
 	mDevice = Kinect2::Device::create();
 	mDevice->start();
@@ -118,11 +89,39 @@ void BasicApp::setup()
 	{
 		mChannelInfrared = frame.getChannel();
 	} );
-	
+
 	mParams = params::InterfaceGl::create( "Params", ivec2( 200, 100 ) );
-	mParams->addParam( "Frame rate",	&mFrameRate,			"", true );
+	mParams->addParam( "Frame rate",	&mFrameRate, "", true );
 	mParams->addParam( "Full screen",	&mFullScreen ).key( "f" );
-	mParams->addButton( "Quit",			[ & ]() { quit(); } ,	"key=q" );
+	mParams->addButton( "Quit",			[ & ]() { quit(); }, "key=q" );
+}
+
+void BasicApp::draw()
+{
+	const gl::ScopedViewport scopedViewport( ivec2( 0 ), getWindowSize() );
+	const gl::ScopedMatrices scopedMatrices;
+	const gl::ScopedBlendAlpha scopedBlendAlpha;
+	gl::clear();
+	gl::setMatricesWindow( getWindowSize() );
+
+	if ( mSurfaceColor ) {
+		const gl::TextureRef tex = gl::Texture::create( *mSurfaceColor );
+		gl::draw( tex, tex->getBounds(), Rectf( vec2( 0.0f ), getWindowCenter() ) );
+	}
+	if ( mChannelDepth ) {
+		const gl::TextureRef tex = gl::Texture::create( *Kinect2::channel16To8( mChannelDepth ) );
+		gl::draw( tex, tex->getBounds(), Rectf( getWindowCenter().x, 0.0f, (float)getWindowWidth(), getWindowCenter().y ) );
+	}
+	if ( mChannelInfrared ) {
+		const gl::TextureRef tex = gl::Texture::create( *mChannelInfrared );
+		gl::draw( tex, tex->getBounds(), Rectf( 0.0f, getWindowCenter().y, getWindowCenter().x, (float)getWindowHeight() ) );
+	}
+	if ( mChannelBodyIndex ) {
+		const gl::TextureRef tex = gl::Texture::create( *Kinect2::colorizeBodyIndex( mChannelBodyIndex ) );
+		gl::draw( tex, tex->getBounds(), Rectf( getWindowCenter(), vec2( getWindowSize() ) ) );
+	}
+
+	mParams->draw();
 }
 
 void BasicApp::update()
@@ -137,7 +136,7 @@ void BasicApp::update()
 
 CINDER_APP( BasicApp, RendererGl, []( App::Settings* settings )
 {
+	settings->disableFrameRate();
 	settings->prepareWindow( Window::Format().size( 800, 600 ).title( "Basic App" ) );
-	settings->setFrameRate( 60.0f );
 } )
-	
+ 

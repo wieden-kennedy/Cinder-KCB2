@@ -1,5 +1,3 @@
-#version 150 core
-
 uniform sampler2D	uTextureColor;
 uniform sampler2D	uTextureDepthToColorTable;
 

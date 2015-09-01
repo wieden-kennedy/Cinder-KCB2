@@ -286,6 +286,19 @@ IFace::IFace()
 {
 }
 
+IFace::IFace( const IFace& rhs )
+{
+	*this = rhs;
+}
+
+IFace& IFace::operator=( const IFace& rhs )
+{
+	mId			= rhs.mId;
+	mIndex		= rhs.mIndex;
+	mTracked	= rhs.mTracked;
+	return *this;
+}
+
 uint64_t IFace::getId() const
 {
 	return mId;
@@ -309,6 +322,25 @@ Face2d::Face2d()
 	for ( size_t i = 0; i < (size_t)FaceProperty_Count; ++i ) {
 		mFaceProperties[ (FaceProperty)i ] = DetectionResult_Unknown;
 	}
+}
+
+Face2d::Face2d( const Face2d& rhs )
+{
+	*this = rhs;
+}
+
+Face2d& Face2d::operator=( const Face2d& rhs )
+{
+	mBoundsColor	= rhs.mBoundsColor;
+	mBoundsInfrared	= rhs.mBoundsInfrared;
+	mFaceProperties	= rhs.mFaceProperties;
+	mId				= rhs.mId;
+	mIndex			= rhs.mIndex;
+	mPointsColor	= rhs.mPointsColor;
+	mPointsInfrared	= rhs.mPointsInfrared;
+	mRotation		= rhs.mRotation;
+	mTracked		= rhs.mTracked;
+	return *this;
 }
 
 const Rectf& Face2d::getBoundsColor() const
@@ -354,6 +386,29 @@ mScale( 0.0f )
 	for ( size_t i = 0; i < (size_t)FaceShapeDeformations_Count; ++i ) {
 		mFaceShapeDeformations[ (FaceShapeDeformations)i ] = 0.0f;
 	}
+}
+
+Face3d::Face3d( const Face3d& rhs )
+{
+	*this = rhs;
+}
+
+Face3d& Face3d::operator=( const Face3d& rhs )
+{
+	mBounds					= rhs.mBounds;
+	mColorHair				= rhs.mColorHair;
+	mColorSkin				= rhs.mColorSkin;
+	mFaceAlignmentQuality	= rhs.mFaceAlignmentQuality;
+	mFaceShapeAnimations	= rhs.mFaceShapeAnimations;
+	mFaceShapeDeformations	= rhs.mFaceShapeDeformations;
+	mHeadPivotPoint			= rhs.mHeadPivotPoint;
+	mId						= rhs.mId;
+	mIndex					= rhs.mIndex;
+	mMesh					= rhs.mMesh;
+	mOrientation			= rhs.mOrientation;
+	mScale					= rhs.mScale;
+	mTracked				= rhs.mTracked;
+	return *this;
 }
 
 const Rectf& Face3d::getBounds() const
@@ -413,6 +468,18 @@ Body::Hand::Hand()
 {
 }
 
+Body::Hand::Hand( const Hand& rhs )
+{
+	*this = rhs;
+}
+
+Body::Hand& Body::Hand::operator=( const Body::Hand& rhs )
+{
+	mConfidence	= rhs.mConfidence;
+	mState		= rhs.mState;
+	return *this;
+}
+
 TrackingConfidence Body::Hand::getConfidence() const
 {
 	return mConfidence;
@@ -429,6 +496,20 @@ Body::Joint::Joint()
 : mOrientation( quat() ), mParentJoint( JointType::JointType_Count ), mPosition( vec3( 0.0f ) ), 
 mTrackingState( TrackingState_NotTracked )
 {
+}
+
+Body::Joint::Joint( const Joint& rhs )
+{
+	*this = rhs;
+}
+
+Body::Joint& Body::Joint::operator=( const Joint& rhs )
+{
+	mOrientation	= rhs.mOrientation;
+	mParentJoint	= rhs.mParentJoint;
+	mPosition		= rhs.mPosition;
+	mTrackingState	= rhs.mTrackingState;
+	return *this;
 }
 
 Body::Joint::Joint( const vec3& position, const quat& orientation, TrackingState trackingState,
@@ -474,6 +555,30 @@ mRestricted( false ), mTracked( false )
 	for ( size_t i = 0; i < (size_t)Expression_Count; ++i ) {
 		mExpressions[ (Expression)i ] = DetectionResult_Unknown;
 	}
+}
+
+Body::Body( const Body& rhs )
+{
+	*this = rhs;
+}
+
+Body& Body::operator=( const Body& rhs )
+{
+	mActivities = rhs.mActivities;
+	mAppearances = rhs.mAppearances;
+	mEngaged = rhs.mEngaged;
+	mExpressions = rhs.mExpressions;
+	mId = rhs.mId;
+	mIndex = rhs.mIndex;
+	mJointMap = rhs.mJointMap;
+	mLean = rhs.mLean;
+	mLeanTrackingState = rhs.mLeanTrackingState;
+	mRestricted = rhs.mRestricted;
+	mTracked = rhs.mTracked;
+	for ( size_t i = 0; i < 2; ++i ) {
+		mHands[ i ] = rhs.mHands[ i ];
+	}
+	return *this;
 }
 
 float Body::calcConfidence( bool weighted ) const
@@ -579,6 +684,11 @@ DetectionResult Body::isEngaged() const
 	return mEngaged;
 }
 
+bool Body::isRestricted() const
+{
+	return mRestricted;
+}
+
 bool Body::isTracked() const 
 { 
 	return mTracked; 
@@ -589,6 +699,17 @@ bool Body::isTracked() const
 Frame::Frame()
 : mTimeStamp( 0L )
 {
+}
+
+Frame::Frame( const Frame& rhs )
+{
+	*this = rhs;
+}
+
+Frame& Frame::operator=( const Frame& rhs )
+{
+	mTimeStamp = rhs.mTimeStamp;
+	return *this;
 }
 
 long long Frame::getTimeStamp() const
@@ -602,6 +723,20 @@ CameraFrame::CameraFrame()
 : mFovDiagonal( 0.0f ), mFovHorizontal( 0.0f ), 
 mFovVertical( 0.0f ), mSize( ivec2( 0 ) )
 {
+}
+
+CameraFrame::CameraFrame( const CameraFrame& rhs )
+{
+	*this = rhs;
+}
+
+CameraFrame& CameraFrame::operator=( const CameraFrame& rhs )
+{
+	mFovDiagonal	= rhs.mFovDiagonal;
+	mFovHorizontal	= rhs.mFovHorizontal;
+	mFovVertical	= rhs.mFovVertical;
+	mSize			= rhs.mSize;
+	return *this;
 }
 
 float CameraFrame::getFovDiagonal() const
@@ -627,9 +762,25 @@ const ivec2& CameraFrame::getSize() const
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 AudioFrame::AudioFrame()
-	: mBeamAngle( 0.0f ), mBeamAngleConfidence( 0.0f ), mBuffer( nullptr ), 
+: mBeamAngle( 0.0f ), mBeamAngleConfidence( 0.0f ), mBuffer( nullptr ), 
 	mBufferSize( 0 )
 {
+}
+
+AudioFrame::AudioFrame( const AudioFrame& rhs )
+{
+	*this = rhs;
+}
+
+AudioFrame& AudioFrame::operator=( const AudioFrame& rhs )
+{
+	mBeamAngle				= rhs.mBeamAngle;
+	mBeamAngleConfidence	= rhs.mBeamAngleConfidence;
+	mBuffer					= rhs.mBuffer;
+	mBufferSize				= rhs.mBufferSize;
+	mFormat					= rhs.mFormat;
+	mTimeStamp				= rhs.mTimeStamp;
+	return *this;
 }
 
 AudioFrame::~AudioFrame()
@@ -672,6 +823,18 @@ BodyFrame::BodyFrame()
 {
 }
 
+BodyFrame::BodyFrame( const BodyFrame& rhs )
+{
+	*this = rhs;
+}
+
+BodyFrame& BodyFrame::operator=( const BodyFrame& rhs )
+{
+	mBodies		= rhs.mBodies;
+	mTimeStamp	= rhs.mTimeStamp;
+	return *this;
+}
+
 const vector<Body>& BodyFrame::getBodies() const
 {
 	return mBodies;
@@ -683,6 +846,19 @@ template<typename T>
 ChannelFrameT<T>::ChannelFrameT()
 : Frame()
 {
+}
+
+template<typename T>
+ChannelFrameT<T>::ChannelFrameT( const ChannelFrameT& rhs )
+{
+	*this = rhs;
+}
+
+template<typename T>
+ChannelFrameT<T>& ChannelFrameT<T>::operator=( const ChannelFrameT<T>& rhs )
+{
+	mChannel = rhs.mChannel;
+	return *this;
 }
 
 template<typename T> 
@@ -702,6 +878,22 @@ ColorFrame::ColorFrame()
 	mSize = ivec2( 1920, 1080 );
 }
 
+ColorFrame::ColorFrame( const ColorFrame& rhs )
+{
+	*this = rhs;
+}
+
+ColorFrame& ColorFrame::operator=( const ColorFrame& rhs )
+{
+	mFovDiagonal	= rhs.mFovDiagonal;
+	mFovHorizontal	= rhs.mFovHorizontal;
+	mFovVertical	= rhs.mFovVertical;
+	mSize			= rhs.mSize;
+	mSurface		= rhs.mSurface;
+	mTimeStamp		= rhs.mTimeStamp;
+	return *this;
+}
+
 const Surface8uRef& ColorFrame::getSurface() const
 {
 	return mSurface;
@@ -715,11 +907,39 @@ DepthFrame::DepthFrame()
 	mSize = ivec2( 512, 424 );
 }
 
+DepthFrame::DepthFrame( const DepthFrame& rhs )
+{
+	*this = rhs;
+}
+
+DepthFrame& DepthFrame::operator=( const DepthFrame& rhs )
+{
+	mChannel		= rhs.mChannel;
+	mFovDiagonal	= rhs.mFovDiagonal;
+	mFovHorizontal	= rhs.mFovHorizontal;
+	mFovVertical	= rhs.mFovVertical;
+	mSize			= rhs.mSize;
+	mTimeStamp		= rhs.mTimeStamp;
+	return *this;
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 Face2dFrame::Face2dFrame()
 : Frame()
 {
+}
+
+Face2dFrame::Face2dFrame( const Face2dFrame& rhs )
+{
+	*this = rhs;
+}
+
+Face2dFrame& Face2dFrame::operator=( const Face2dFrame& rhs )
+{
+	mFaces		= rhs.mFaces;
+	mTimeStamp	= rhs.mTimeStamp;
+	return *this;
 }
 
 const vector<Face2d>& Face2dFrame::getFaces() const
@@ -734,6 +954,18 @@ Face3dFrame::Face3dFrame()
 {
 }
 
+Face3dFrame::Face3dFrame( const Face3dFrame& rhs )
+{
+	*this = rhs;
+}
+
+Face3dFrame& Face3dFrame::operator=( const Face3dFrame& rhs )
+{
+	mFaces		= rhs.mFaces;
+	mTimeStamp	= rhs.mTimeStamp;
+	return *this;
+}
+
 const vector<Face3d>& Face3dFrame::getFaces() const
 {
 	return mFaces;
@@ -742,9 +974,23 @@ const vector<Face3d>& Face3dFrame::getFaces() const
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 Device::Process::Process()
-: mNewData( atomic<bool>( false ) ), mRunning( atomic<bool>( false ) ), 
-mThreadCallback( nullptr )
+: mThreadCallback( nullptr )
 {
+	mNewData.store( false, memory_order_release );
+	mRunning.store( false, memory_order_release );
+}
+
+Device::Process::Process( const Process& rhs )
+{
+	*this = rhs;
+}
+
+Device::Process& Device::Process::operator=( const Device::Process& rhs )
+{
+	mNewData.store( rhs.mNewData.load( memory_order_acquire ), memory_order_release );
+	mRunning.store( rhs.mRunning.load( memory_order_acquire ), memory_order_release );
+	mThread		= rhs.mThread;
+	return *this;
 }
 
 Device::Process::~Process()
@@ -756,15 +1002,15 @@ void Device::Process::start()
 {
 	stop();
 	if ( mThreadCallback != nullptr ) {
-		mNewData	= false;
-		mRunning	= true;
+		mNewData.store( false, memory_order_release );
+		mRunning.store( true, memory_order_release );
 		mThread		= shared_ptr<thread>( new thread( mThreadCallback ) );
 	}
 }
 
 void Device::Process::stop()
 {
-	mRunning = false;
+	mRunning.store( false, memory_order_release );
 	if ( mThread ) {
 		mThread->join();
 		mThread.reset();

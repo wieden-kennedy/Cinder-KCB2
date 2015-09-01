@@ -36,7 +36,6 @@
 */
 
 #include "cinder/app/App.h"
-#include "cinder/gl/Texture.h"
 #include "cinder/params/Params.h"
 
 #include "Kinect2.h"
@@ -44,8 +43,9 @@
 class BodyApp : public ci::app::App
 {
 public:
+	BodyApp();
+
 	void						draw() override;
-	void						setup() override;
 	void						update() override;
 private:
 	Kinect2::BodyFrame			mBodyFrame;
@@ -66,25 +66,53 @@ using namespace ci;
 using namespace ci::app;
 using namespace std;
 
+BodyApp::BodyApp()
+{
+	mFrameRate = 0.0f;
+	mFullScreen = false;
+
+	mDevice = Kinect2::Device::create();
+	mDevice->start();
+	mDevice->connectBodyEventHandler( [ & ]( const Kinect2::BodyFrame frame )
+	{
+		mBodyFrame = frame;
+	} );
+	mDevice->connectBodyIndexEventHandler( [ & ]( const Kinect2::BodyIndexFrame frame )
+	{
+		mChannelBodyIndex = frame.getChannel();
+	} );
+	mDevice->connectDepthEventHandler( [ & ]( const Kinect2::DepthFrame frame )
+	{
+		mChannelDepth = frame.getChannel();
+	} );
+
+	mParams = params::InterfaceGl::create( "Params", ivec2( 200, 100 ) );
+	mParams->addParam( "Frame rate",	&mFrameRate, "", true );
+	mParams->addParam( "Full screen",	&mFullScreen ).key( "f" );
+	mParams->addButton( "Quit", 		[ & ]() { quit(); }, "key=q" );
+}
+
 void BodyApp::draw()
 {
-	gl::viewport( getWindowSize() );
-	gl::clear( Colorf::black() );
+	const gl::ScopedViewport scopedViewport( ivec2( 0 ), getWindowSize() );
+	const gl::ScopedMatrices scopedMatrices;
+	const gl::ScopedBlendAlpha scopedBlendAlpha;
+	gl::setMatricesWindow( getWindowSize() );
+	gl::clear();
 	gl::color( ColorAf::white() );
 	gl::disableDepthRead();
 	gl::disableDepthWrite();
-	gl::enableAlphaBlending();
 
 	if ( mChannelDepth ) {
 		gl::enable( GL_TEXTURE_2D );
-		gl::TextureRef tex = gl::Texture::create( *Kinect2::channel16To8( mChannelDepth ) );
+		const gl::TextureRef tex = gl::Texture::create( *Kinect2::channel16To8( mChannelDepth ) );
 		gl::draw( tex, tex->getBounds(), Rectf( getWindowBounds() ) );
 	}
 
 	if ( mChannelBodyIndex ) {
 		gl::enable( GL_TEXTURE_2D );
 		gl::color( ColorAf( Colorf::white(), 0.15f ) );
-		gl::TextureRef tex = gl::Texture::create( *Kinect2::colorizeBodyIndex( mChannelBodyIndex ) );
+		const gl::TextureRef tex = gl::Texture::create( *Kinect2::colorizeBodyIndex( mChannelBodyIndex ) );
 		gl::draw( tex, tex->getBounds(), Rectf( getWindowBounds() ) );
 
 		auto drawHand = [ & ]( const Kinect2::Body::Hand& hand, const ivec2& pos ) -> void
@@ -106,7 +134,7 @@ void BodyApp::draw()
 			gl::drawSolidCircle( pos, 30.0f, 32 );
 		};
 
-		gl::pushMatrices();
+		const gl::ScopedModelMatrix scopedModelMatrix;
 		gl::scale( vec2( getWindowSize() ) / vec2( mChannelBodyIndex->getSize() ) );
 		gl::disable( GL_TEXTURE_2D );
 		for ( const Kinect2::Body& body : mBodyFrame.getBodies() ) {
@@ -114,9 +142,9 @@ void BodyApp::draw()
 				gl::color( ColorAf::white() );
 				for ( const auto& joint : body.getJointMap() ) {
 					if ( joint.second.getTrackingState() == TrackingState::TrackingState_Tracked ) {
-						vec2 pos( mDevice->mapCameraToDepth( joint.second.getPosition() ) );
+						const vec2 pos( mDevice->mapCameraToDepth( joint.second.getPosition() ) );
 						gl::drawSolidCircle( pos, 5.0f, 32 );
-						vec2 parent( mDevice->mapCameraToDepth(
+						const vec2 parent( mDevice->mapCameraToDepth(
 							body.getJointMap().at( joint.second.getParentJoint() ).getPosition()
 							) );
 						gl::drawLine( pos, parent );
@@ -126,37 +154,9 @@ void BodyApp::draw()
 				drawHand( body.getHandRight(), mDevice->mapCameraToDepth( body.getJointMap().at( JointType_HandRight ).getPosition() ) );
 			}
 		}
-		gl::popMatrices();
 	}
 
 	mParams->draw();
-}
-
-void BodyApp::setup()
-{
-	mFrameRate	= 0.0f;
-	mFullScreen	= false;
-
-	mDevice = Kinect2::Device::create();
-	mDevice->start();
-	mDevice->connectBodyEventHandler( [ & ]( const Kinect2::BodyFrame frame )
-	{
-		mBodyFrame = frame;
-	} );
-	mDevice->connectBodyIndexEventHandler( [ & ]( const Kinect2::BodyIndexFrame frame )
-	{
-		mChannelBodyIndex = frame.getChannel();
-	} );
-	mDevice->connectDepthEventHandler( [ & ]( const Kinect2::DepthFrame frame )
-	{
-		mChannelDepth = frame.getChannel();
-	} );
-	
-	mParams = params::InterfaceGl::create( "Params", ivec2( 200, 100 ) );
-	mParams->addParam( "Frame rate",	&mFrameRate,			"", true );
-	mParams->addParam( "Full screen",	&mFullScreen ).key( "f" );
-	mParams->addButton( "Quit",			[ & ]() { quit(); },	"key=q" );
-
 }
 
 void BodyApp::update()
@@ -172,5 +172,5 @@ void BodyApp::update()
 CINDER_APP( BodyApp, RendererGl, []( App::Settings* settings )
 {
 	settings->prepareWindow( Window::Format().size( 1024, 768 ).title( "Body App" ) );
-	settings->setFrameRate( 60.0f );
+	settings->disableFrameRate();
 } )

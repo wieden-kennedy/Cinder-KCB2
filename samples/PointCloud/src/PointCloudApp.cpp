@@ -36,10 +36,8 @@
 */
 
 #include "cinder/app/App.h"
-#include "cinder/MayaCamUI.h"
-#include "cinder/gl/GlslProg.h"
-#include "cinder/gl/Texture.h"
-#include "cinder/gl/VboMesh.h"
+#include "cinder/CameraUi.h"
+#include "cinder/gl/gl.h"
 #include "cinder/params/Params.h"
 
 #include "Kinect2.h"
@@ -47,10 +45,10 @@
 class PointCloudApp : public ci::app::App
 {
 public:
+	PointCloudApp();
+
 	void						draw() override;
-	void 						mouseDrag( ci::app::MouseEvent event ) override;
 	void						resize() override;
-	void						setup() override;
 	void						update() override;
 private:
 	ci::Channel16uRef			mChannelDepth;
@@ -61,15 +59,14 @@ private:
 	long long					mTimeStamp;
 	long long					mTimeStampPrev;
 
-	void						loadGlsl();
-	ci::gl::GlslProgRef			mGlslProg;
-	ci::gl::TextureRef			mTextureColor;
-	ci::gl::TextureRef			mTextureDepth;
-	ci::gl::TextureRef			mTextureDepthToCameraTable;
-	ci::gl::TextureRef			mTextureDepthToColorTable;
-	ci::gl::VboMeshRef			mVboMesh;
+	ci::gl::Texture2dRef		mTextureColor;
+	ci::gl::Texture2dRef		mTextureDepth;
+	ci::gl::Texture2dRef		mTextureDepthToCameraTable;
+	ci::gl::Texture2dRef		mTextureDepthToColorTable;
+	ci::gl::BatchRef			mBatchPointCloud;
 
-	ci::MayaCamUI				mMayaCam;
+	ci::CameraPersp				mCamera;
+	ci::CameraUi				mCamUi;
 
 	float						mFrameRate;
 	bool						mFullScreen;
@@ -77,19 +74,86 @@ private:
 };
 
 #include "cinder/app/RendererGl.h"
+#include "cinder/Log.h"
 
 using namespace ci;
 using namespace ci::app;
 using namespace std;
 
+PointCloudApp::PointCloudApp()
+{	
+	mFrameRate		= 0.0f;
+	mFullScreen		= false;
+	mTimeStamp		= 0L;
+	mTimeStampPrev	= mTimeStamp;
+
+	mCamera = CameraPersp( getWindowWidth(), getWindowHeight(), 60.0f, 1.0f, 5000.0f );
+	mCamera.lookAt( vec3( 0.0f ), vec3( 0.0f, 0.0f, 1.0f ) );
+	mCamUi	= CameraUi( &mCamera, getWindow() );
+
+	gl::GlslProgRef glsl;
+	try {
+		glsl = gl::GlslProg::create( gl::GlslProg::Format()
+			.version( 330 )
+			.vertex( loadAsset( "cloud.vert" ) )
+			.fragment( loadAsset( "cloud.frag" ) ) );
+	} catch ( gl::GlslProgCompileExc ex ) {
+		CI_LOG_V( "GLSL Error: " << ex.what() );
+	} catch ( gl::GlslNullProgramExc ex ) {
+		CI_LOG_V( "GLSL Error: " << ex.what() );
+	} catch ( ... ) {
+		CI_LOG_V( "Unknown GLSL Error" );
+	}
+	if ( !glsl ) {
+		quit();
+		return;
+	}
+
+	glsl->uniform( "uTextureColor",					0 );
+	glsl->uniform( "uTextureDepth",					1 );
+	glsl->uniform( "uTextureDepthToCameraTable",	2 );
+	glsl->uniform( "uTextureDepthToColorTable",		3 );
+
+	gl::VertBatch vertBatch;
+	ivec2 sz = Kinect2::DepthFrame().getSize();
+	for ( int32_t x = 0; x < sz.x; ++x ) {
+		for ( int32_t y = 0; y < sz.y; ++y ) {
+			const vec2 v = vec2( x, y ) / vec2( sz );
+			vertBatch.texCoord0( v );
+			vertBatch.vertex( v );
+		}
+	}
+	mBatchPointCloud = gl::Batch::create( vertBatch, glsl );
+
+	mDevice = Kinect2::Device::create();
+	mDevice->start();
+	mDevice->connectColorEventHandler( [ & ]( const Kinect2::ColorFrame& frame )
+	{
+		mSurfaceColor = frame.getSurface();
+	} );
+	mDevice->connectDepthEventHandler( [ & ]( const Kinect2::DepthFrame& frame )
+	{
+		mChannelDepth = frame.getChannel();
+		mTimeStamp = frame.getTimeStamp();
+	} );
+
+	mParams = params::InterfaceGl::create( "Params", ivec2( 200, 120 ) );
+	mParams->addParam( "Frame rate",	&mFrameRate,			"", true );
+	mParams->addParam( "Full screen",	&mFullScreen ).key( "f" );
+	mParams->addButton( "Quit",			[ & ]() { quit(); },	"key=q" );
+
+	resize();
+	
+	gl::enableVerticalSync();
+}
+
 void PointCloudApp::draw()
 {
-	gl::viewport( getWindowSize() );
+	const gl::ScopedViewport scopedViewport( ivec2( 0 ), getWindowSize() );
+	const gl::ScopedMatrices scopedMatrices;
+	const gl::ScopedBlendAlpha scopedBlendAlpha;
 	gl::clear();
-	gl::setMatrices( mMayaCam.getCamera() );
-	gl::enableAlphaBlending();
-	gl::enableDepthRead();
-	gl::enableDepthWrite();
+	gl::setMatrices( mCamera );
 	
 	if ( mSurfaceColor ) {
 		if ( mTextureColor ) {
@@ -97,145 +161,44 @@ void PointCloudApp::draw()
 		} else {
 			mTextureColor = gl::Texture::create( *mSurfaceColor );
 		}
-		mTextureColor->bind( 0 );
 	}
 	if ( mChannelDepth ) {
 		if ( mTextureDepth ) {
-			gl::ScopedTextureBind scopeTextureBind( mTextureDepth->getTarget(), mTextureDepth->getId() );
-			glTexSubImage2D( mTextureDepth->getTarget(), 0, 0, 0,
-				mTextureDepth->getWidth(), mTextureDepth->getHeight(),
-				GL_RED_INTEGER,	GL_UNSIGNED_SHORT, mChannelDepth->getData() );
+			mTextureDepth->update( *mChannelDepth );
 		} else {
-			mTextureDepth = gl::Texture::create( 
-				mChannelDepth->getWidth(), mChannelDepth->getHeight(), 
-				gl::Texture::Format().dataType( GL_UNSIGNED_SHORT ).internalFormat( GL_R16UI ) );
+			mTextureDepth = gl::Texture2d::create( *mChannelDepth );
 		}
-		mTextureDepth->bind( 1 );
 	}
 	if ( mSurfaceDepthToCameraTable && !mTextureDepthToCameraTable ) {
-		mTextureDepthToCameraTable = gl::Texture::create( *mSurfaceDepthToCameraTable );
-		mTextureDepthToCameraTable->bind( 2 );
+		if ( mTextureDepthToCameraTable ) {
+			mTextureDepthToCameraTable->update( *mSurfaceDepthToCameraTable );
+		} else {
+			mTextureDepthToCameraTable = gl::Texture::create( *mSurfaceDepthToCameraTable );
+		}
 	}
 	if ( mSurfaceDepthToColorTable ) {
 		if ( mTextureDepthToColorTable ) {
 			mTextureDepthToColorTable->update( *mSurfaceDepthToColorTable );
 		} else {
-			mTextureDepthToColorTable = gl::Texture::create( 
-				*mSurfaceDepthToColorTable,
-				gl::Texture::Format().dataType( GL_FLOAT ) );
+			mTextureDepthToColorTable = gl::Texture::create( *mSurfaceDepthToColorTable );
 		}
-		mTextureDepthToColorTable->bind( 3 );
 	}
 
-	gl::ScopedGlslProg scopeGlsl( mGlslProg );
-	gl::setDefaultShaderVars();
-	mGlslProg->uniform( "uTextureColor",				0 );
-	mGlslProg->uniform( "uTextureDepth",				1 );
-	mGlslProg->uniform( "uTextureDepthToCameraTable",	2 );
-	mGlslProg->uniform( "uTextureDepthToColorTable",	3 );
-
-	gl::draw( mVboMesh );
+	if ( mTextureColor && mTextureDepth && mTextureDepthToCameraTable && mTextureDepthToColorTable ) {
+		const gl::ScopedTextureBind scopedTextureBind0( mTextureColor,				0 );
+		const gl::ScopedTextureBind scopedTextureBind1( mTextureDepth,				1 );
+		const gl::ScopedTextureBind scopedTextureBind2( mTextureDepthToCameraTable, 2 );
+		const gl::ScopedTextureBind scopedTextureBind3( mTextureDepthToColorTable,	3 );
+		gl::setDefaultShaderVars();
+		mBatchPointCloud->draw();
+	}
 	
-	if ( mTextureColor ) {
-		mTextureColor->unbind();
-	}
-	if ( mTextureDepth ) {
-		mTextureDepth->unbind();
-	}
-	if ( mTextureDepthToCameraTable ) {
-		mTextureDepthToCameraTable->unbind();
-	}
-	if ( mTextureDepthToColorTable ) {
-		mTextureDepthToColorTable->unbind();
-	}
-
 	mParams->draw();
-}
-
-void PointCloudApp::loadGlsl()
-{
-	try {
-		mGlslProg = gl::GlslProg::create( gl::GlslProg::Format()
-										  .vertex( loadAsset( "cloud.vert" ) )
-										  .fragment( loadAsset( "cloud.frag" ) ) );
-	} catch ( gl::GlslProgCompileExc ex ) {
-		console() << "GLSL Error: " << ex.what() << endl;
-		quit();
-	} catch ( gl::GlslNullProgramExc ex ) {
-		console() << "GLSL Error: " << ex.what() << endl;
-		quit();
-	} catch ( ... ) {
-		console() << "Unknown GLSL Error" << endl;
-		quit();
-	}
-}
-
-void PointCloudApp::mouseDrag( MouseEvent event )
-{
-	bool middle = event.isMiddleDown()	|| ( event.isMetaDown()		&& event.isLeftDown() );
-	bool right	= event.isRightDown()	|| ( event.isControlDown()	&& event.isLeftDown() );
-	mMayaCam.mouseDrag( event.getPos(), event.isLeftDown() && !middle && !right, middle, right );
 }
 
 void PointCloudApp::resize()
 {
-	CameraPersp cam = mMayaCam.getCamera();
-	cam.setAspectRatio( getWindowAspectRatio() );
-	mMayaCam.setCurrentCam( cam );
-
-	gl::enableVerticalSync();
-}
-
-void PointCloudApp::setup()
-{	
-	gl::enable( GL_TEXTURE_2D );
-	
-	mFrameRate		= 0.0f;
-	mFullScreen		= false;
-	mTimeStamp		= 0L;
-	mTimeStampPrev	= mTimeStamp;
-	
-	loadGlsl();
-
-	mDevice = Kinect2::Device::create();
-	mDevice->start();
-	mDevice->connectColorEventHandler( [ & ]( const Kinect2::ColorFrame& frame )
-	{
-		mSurfaceColor	= frame.getSurface();
-	} );
-	mDevice->connectDepthEventHandler( [ & ]( const Kinect2::DepthFrame& frame )
-	{
-		mChannelDepth	= frame.getChannel();
-		mTimeStamp		= frame.getTimeStamp();
-	} );
-
-	//////////////////////////////////////////////////////////////////////////////////////////////
-
-	ivec2 sz = Kinect2::DepthFrame().getSize();
-	vector<vec2> vertices;
-	for ( int32_t x = 0; x < sz.x; ++x ) {
-		for ( int32_t y = 0; y < sz.y; ++y ) {
-			vertices.push_back( vec2( x, y ) / vec2( sz ) );
-		}
-	}
-
-	gl::VboRef vbo = gl::Vbo::create( GL_ARRAY_BUFFER, vertices.size() * sizeof( vec2 ), &vertices[ 0 ], GL_STATIC_DRAW );
-
-	geom::BufferLayout layout;
-	layout.append( geom::Attrib::POSITION, 2, sizeof( vec2 ), 0 );
-	vector<pair<geom::BufferLayout, gl::VboRef>> vertexArrayBuffers = { make_pair( layout, vbo ) };
-
-	mVboMesh = gl::VboMesh::create( vertices.size(), GL_POINTS, vertexArrayBuffers );
-
-	//////////////////////////////////////////////////////////////////////////////////////////////
-	
-	mParams = params::InterfaceGl::create( "Params", ivec2( 200, 120 ) );
-	mParams->addParam( "Frame rate",	&mFrameRate,				"", true );
-	mParams->addParam( "Full screen",	&mFullScreen ).key( "f" );
-	mParams->addButton( "Load GLSL",	[ & ]() { loadGlsl(); },	"key=g" );
-	mParams->addButton( "Quit",			[ & ]() { quit(); },		"key=q" );
-
-	resize();
+	mCamera.setAspectRatio( getWindowAspectRatio() );
 }
 
 void PointCloudApp::update()
@@ -254,13 +217,13 @@ void PointCloudApp::update()
 	if ( ( mTimeStamp != mTimeStampPrev ) && mSurfaceColor && mChannelDepth ) {
 		mTimeStampPrev = mTimeStamp;
 
-		mSurfaceDepthToColorTable	= Surface32f::create( mChannelDepth->getWidth(), mChannelDepth->getHeight(), false, SurfaceChannelOrder::RGB );
-		vector<ivec2> positions		= mDevice->mapDepthToColor( mChannelDepth );
+		mSurfaceDepthToColorTable		= Surface32f::create( mChannelDepth->getWidth(), mChannelDepth->getHeight(), false, SurfaceChannelOrder::RGB );
+		const vector<ivec2> positions	= mDevice->mapDepthToColor( mChannelDepth );
 
 		vec2 sz( Kinect2::ColorFrame().getSize() );
 
-		Surface32f::Iter iter		= mSurfaceDepthToColorTable->getIter();
-		vector<ivec2>::iterator v	= positions.begin();
+		Surface32f::Iter iter			= mSurfaceDepthToColorTable->getIter();
+		vector<ivec2>::const_iterator v	= positions.begin();
 		while ( iter.line() ) {
 			while ( iter.pixel() ) {
 				iter.r() = (float)v->x / sz.x;
@@ -275,6 +238,6 @@ void PointCloudApp::update()
 CINDER_APP( PointCloudApp, RendererGl( RendererGl::Options().coreProfile() ), []( App::Settings* settings )
 {
 	settings->prepareWindow( Window::Format().size( 1280, 960 ).title( "Point Cloud App" ) );
-	settings->setFrameRate( 60.0f );
+	settings->disableFrameRate();
 } )
  
