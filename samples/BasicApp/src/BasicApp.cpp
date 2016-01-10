@@ -35,6 +35,16 @@
 * 
 */
 
+#define NOMINMAX
+
+// Include C++ headers
+#include <algorithm>
+using namespace std;
+
+// Include Windows headers
+#include <windows.h>
+#include <gdiplus.h>
+
 #include "cinder/app/App.h"
 #include "cinder/params/Params.h"
 
